@@ -1,0 +1,6 @@
+*
+!src/
+!src/**
+!*.scala
+!.gitignore
+!build.sbt
