@@ -1,0 +1,158 @@
+$date
+2026-10-02T15:54+0000
+$end
+$version
+0.2
+$end
+$comment
+
+$end
+$timescale 1ns  $end
+$scope module CsrAdapter $end
+ $var wire 1 ! csr_uart0_ctrl_en $end
+ $var wire 2 " readWords_8_2 $end
+ $var wire 1 # apb_penable $end
+ $var wire 1 $ apb_psel $end
+ $var wire 1 % apb_pready $end
+ $var wire 1 & csr_uart0_data_txData_trg $end
+ $var wire 32 ' reads_13_2 $end
+ $var wire 32 ( csr_gpio1_dataOut $end
+ $var wire 2 ) reads_3_2 $end
+ $var wire 32 * reads_7_2 $end
+ $var wire 1 + reset $end
+ $var wire 32 , apb_paddr $end
+ $var wire 1 - reads_reg $end
+ $var wire 32 . csr_gpio1_dataIn $end
+ $var wire 32 / csr_gpio1_dir $end
+ $var wire 1 0 writable $end
+ $var wire 1 1 apb_pwrite $end
+ $var wire 32 2 csr_gpio0_dataOut $end
+ $var wire 1 3 reads_2_2 $end
+ $var wire 32 4 reads_12_2 $end
+ $var wire 32 5 reads_6_2 $end
+ $var wire 8 6 csr_uart0_data_rxData_data $end
+ $var wire 1 7 csr_uart0_ctrl_loopback $end
+ $var wire 32 8 reads_reg_4 $end
+ $var wire 1 9 reads_reg_3 $end
+ $var wire 8 : reads_reg_2 $end
+ $var wire 1 ; reads_reg_1 $end
+ $var wire 32 < reads_reg_8 $end
+ $var wire 32 = reads_reg_7 $end
+ $var wire 1 > reads_reg_6 $end
+ $var wire 32 ? reads_reg_5 $end
+ $var wire 32 @ apb_pwdata $end
+ $var wire 1 A readable $end
+ $var wire 1 B wrAccess $end
+ $var wire 32 C apb_prdata $end
+ $var wire 1 D csr_gpio0_ctrl_en $end
+ $var wire 1 E clock $end
+ $var wire 1 F csr_uart0_status_rxReady $end
+ $var wire 32 G reads_11_2 $end
+ $var wire 2 H reads_1_2 $end
+ $var wire 1 I reads_5_2 $end
+ $var wire 1 J reads_9_2 $end
+ $var wire 32 K csr_gpio0_dataIn $end
+ $var wire 1 L csr_uart0_data_rxData_trg $end
+ $var wire 2 M readWords_3_2 $end
+ $var wire 8 N csr_uart0_data_txData_data $end
+ $var wire 32 O csr_gpio0_dir $end
+ $var wire 1 P csr_uart0_status_txEmpty $end
+ $var wire 1 Q apb_pslverr $end
+ $var wire 1 R csr_gpio1_ctrl_en $end
+ $var wire 1 S reads_0_2 $end
+ $var wire 32 T reads_10_2 $end
+ $var wire 8 U reads_4_2 $end
+ $var wire 1 V rdAccess $end
+ $var wire 32 W reads_8_2 $end
+$upscope $end
+$enddefinitions $end
+$dumpvars
+00
+01
+b00000000000000000000000000000000 *
+03
+b00000000000000000000000000000000 ,
+b00000000000000000000000000000000 '
+07
+b00000000000000000000000000000000 (
+09
+0;
+0>
+b00 )
+0A
+0B
+b00000000000000000000000000000000 =
+b00000000000000000000000000000000 <
+0D
+0E
+0F
+b00000000000000000000000000000000 8
+0I
+b00000000000000000000000000000000 2
+0J
+b00000000000000000000000000000000 5
+b00000000000000000000000000000000 4
+0L
+b00000000000000000000000000000000 /
+b00000000000000000000000000000000 .
+b00 "
+0P
+0Q
+0R
+0S
+0V
+b00000000 U
+b00000000 N
+b00000000 :
+b00000000 6
+b00000000000000000000000000000000 K
+b00000000000000000000000000000000 G
+b00000000000000000000000000000000 C
+b00000000000000000000000000000000 ?
+b00000000000000000000000000000000 @
+0!
+b00 H
+0#
+0$
+b00 M
+b00000000000000000000000000000000 W
+0%
+0&
+0+
+b00000000000000000000000000000000 T
+b00000000000000000000000000000000 O
+0-
+$end
+#0
+b11011110101011011011111011101111 '
+1+
+#1
+1E
+#6
+0E
+1+
+#11
+1E
+#16
+1A
+b11011110101011011011111011101111 C
+1$
+0E
+0+
+b10000000000000000000000000000000 ,
+#21
+1%
+1E
+1V
+#26
+1#
+0E
+#31
+0%
+1E
+0V
+#36
+0#
+0$
+0E
+b00000000000000000000000000000000 ,

@@ -1,0 +1,36 @@
+[0m[[0m[0mdebug[0m] [0m[0mCreated transactional ClassFileManager with tempDir = C:\Users\emmel\02201-agile-hw-design\Agile-FFT-Project\lab4\target\out\jvm\scala-2.13.16\lab4\classes.bak[0m
+[0m[[0m[0mdebug[0m] [0m[0mAbout to delete class files:[0m
+[0m[[0m[0mdebug[0m] [0m[0mWe backup class files:[0m
+[0m[[0m[0mdebug[0m] [0m[0mCreated transactional ClassFileManager with tempDir = C:\Users\emmel\02201-agile-hw-design\Agile-FFT-Project\lab4\target\out\jvm\scala-2.13.16\lab4\classes.bak[0m
+[0m[[0m[0mdebug[0m] [0m[0mAbout to delete class files:[0m
+[0m[[0m[0mdebug[0m] [0m[0mWe backup class files:[0m
+[0m[[0m[0mdebug[0m] [0m[0mRegistering generated classes:[0m
+[0m[[0m[0mdebug[0m] [0m[0m	FieldPort$.class[0m
+[0m[[0m[0mdebug[0m] [0m[0m	Const$.class[0m
+[0m[[0m[0mdebug[0m] [0m[0m	RoTrg$.class[0m
+[0m[[0m[0mdebug[0m] [0m[0m	Rw$.class[0m
+[0m[[0m[0mdebug[0m] [0m[0m	Const.class[0m
+[0m[[0m[0mdebug[0m] [0m[0m	Register.class[0m
+[0m[[0m[0mdebug[0m] [0m[0m	Ro$.class[0m
+[0m[[0m[0mdebug[0m] [0m[0m	Rw.class[0m
+[0m[[0m[0mdebug[0m] [0m[0m	Field$.class[0m
+[0m[[0m[0mdebug[0m] [0m[0m	WoTrg.class[0m
+[0m[[0m[0mdebug[0m] [0m[0m	Sheet.class[0m
+[0m[[0m[0mdebug[0m] [0m[0m	RoTrg.class[0m
+[0m[[0m[0mdebug[0m] [0m[0m	FieldPort.class[0m
+[0m[[0m[0mdebug[0m] [0m[0m	BlockInst.class[0m
+[0m[[0m[0mdebug[0m] [0m[0m	Field.class[0m
+[0m[[0m[0mdebug[0m] [0m[0m	FieldType.class[0m
+[0m[[0m[0mdebug[0m] [0m[0m	CsrSpec$.class[0m
+[0m[[0m[0mdebug[0m] [0m[0m	DynamicBundle.class[0m
+[0m[[0m[0mdebug[0m] [0m[0m	CsrAdapter.class[0m
+[0m[[0m[0mdebug[0m] [0m[0m	Ro.class[0m
+[0m[[0m[0mdebug[0m] [0m[0m	BlockInst$.class[0m
+[0m[[0m[0mdebug[0m] [0m[0m	WoTrg$.class[0m
+[0m[[0m[0mdebug[0m] [0m[0m	CsrAdapter$delayedInit$body.class[0m
+[0m[[0m[0mdebug[0m] [0m[0m	Sheet$.class[0m
+[0m[[0m[0mdebug[0m] [0m[0m	ApbPort.class[0m
+[0m[[0m[0mdebug[0m] [0m[0m	CsrSpec.class[0m
+[0m[[0m[0mdebug[0m] [0m[0m	Register$.class[0m
+[0m[[0m[0mdebug[0m] [0m[0m	CsrAdapter$.class[0m
+[0m[[0m[0mdebug[0m] [0m[0mRemoving the temporary directory used for backing up class files: C:\Users\emmel\02201-agile-hw-design\Agile-FFT-Project\lab4\target\out\jvm\scala-2.13.16\lab4\classes.bak[0m

@@ -1,0 +1,10 @@
+[0m[[0m[31merror[0m] [0m[0mC:\Users\emmel\02201-agile-hw-design\Agile-FFT-Project\lab4\src\main\scala\CsrAdapter.scala:255:23: exception during macro expansion: [0m
+[0m[[0m[31merror[0m] [0m[0mjava.lang.Exception: Cannot include blocks that do not begin with is() in switch.[0m
+[0m[[0m[31merror[0m] [0m[0m	at chisel3.util.switch$.$anonfun$impl$1(Conditional.scala:108)[0m
+[0m[[0m[31merror[0m] [0m[0m	at scala.collection.LinearSeqOps.foldLeft(LinearSeq.scala:183)[0m
+[0m[[0m[31merror[0m] [0m[0m	at scala.collection.LinearSeqOps.foldLeft$(LinearSeq.scala:179)[0m
+[0m[[0m[31merror[0m] [0m[0m	at scala.collection.immutable.List.foldLeft(List.scala:79)[0m
+[0m[[0m[31merror[0m] [0m[0m	at chisel3.util.switch$.impl(Conditional.scala:102)[0m
+[0m[[0m[31merror[0m] [0m[0m    switch(apb.paddr) {[0m
+[0m[[0m[31merror[0m] [0m[0m                      ^[0m
+[0m[[0m[31merror[0m] [0m[0mone error found[0m

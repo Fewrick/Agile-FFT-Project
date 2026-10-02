@@ -1,0 +1,16 @@
+[0m[[0m[0mdebug[0m] [0m[0mPackaging C:\Users\emmel\02201-agile-hw-design\Agile-FFT-Project\lab4\target\out\jvm\scala-2.13.16\lab4\lab4_2.13-0.1.0-SNAPSHOT-tests.jar ...[0m
+[0m[[0m[0mdebug[0m] [0m[0mInput file mappings:[0m
+[0m[[0m[0mdebug[0m] [0m[0m	ApbMasterBfm.class[0m
+[0m[[0m[0mdebug[0m] [0m[0m	  C:\Users\emmel\02201-agile-hw-design\Agile-FFT-Project\lab4\target\out\jvm\scala-2.13.16\lab4\test-classes\ApbMasterBfm.class[0m
+[0m[[0m[0mdebug[0m] [0m[0m	GeneratorTest.class[0m
+[0m[[0m[0mdebug[0m] [0m[0m	  C:\Users\emmel\02201-agile-hw-design\Agile-FFT-Project\lab4\target\out\jvm\scala-2.13.16\lab4\test-classes\GeneratorTest.class[0m
+[0m[[0m[0mdebug[0m] [0m[0m	PythonSocAdapter$$anon$2.class[0m
+[0m[[0m[0mdebug[0m] [0m[0m	  C:\Users\emmel\02201-agile-hw-design\Agile-FFT-Project\lab4\target\out\jvm\scala-2.13.16\lab4\test-classes\PythonSocAdapter$$anon$2.class[0m
+[0m[[0m[0mdebug[0m] [0m[0m	PythonSocAdapter.class[0m
+[0m[[0m[0mdebug[0m] [0m[0m	  C:\Users\emmel\02201-agile-hw-design\Agile-FFT-Project\lab4\target\out\jvm\scala-2.13.16\lab4\test-classes\PythonSocAdapter.class[0m
+[0m[[0m[0mdebug[0m] [0m[0m	PythonSocAdapterWrapper$$anon$1.class[0m
+[0m[[0m[0mdebug[0m] [0m[0m	  C:\Users\emmel\02201-agile-hw-design\Agile-FFT-Project\lab4\target\out\jvm\scala-2.13.16\lab4\test-classes\PythonSocAdapterWrapper$$anon$1.class[0m
+[0m[[0m[0mdebug[0m] [0m[0m	PythonSocAdapterWrapper.class[0m
+[0m[[0m[0mdebug[0m] [0m[0m	  C:\Users\emmel\02201-agile-hw-design\Agile-FFT-Project\lab4\target\out\jvm\scala-2.13.16\lab4\test-classes\PythonSocAdapterWrapper.class[0m
+[0m[[0m[0mdebug[0m] [0m[0mDone packaging.[0m
+[0m[[0m[0mdebug[0m] [0m[0mwrote ${OUT}/jvm/scala-2.13.16/lab4/lab4_2.13-0.1.0-SNAPSHOT-tests.jar[0m
