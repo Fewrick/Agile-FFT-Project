@@ -30,32 +30,35 @@ object Sheet {
 
   def load(filepath: String): Map[String, Sheet] = {
 
-    val workbook = new XSSFWorkbook(new FileInputStream(new File(filepath)))
+    val input = new FileInputStream(new File(filepath))
+    val workbook = try new XSSFWorkbook(input) finally input.close()
+    try {
 
-    val sheetMap = mutable.Map[String, Sheet]()
-    workbook.forEach { sheet =>
-      val numCols = getLastNonEmptyInRow(sheet.getRow(0).cellIterator())
-      val numRows = getLastNonEmptyRowStart(sheet.rowIterator()) - 1
+      val sheetMap = mutable.Map[String, Sheet]()
+      workbook.forEach { sheet =>
+        val numCols = getLastNonEmptyInRow(sheet.getRow(0).cellIterator())
+        val numRows = getLastNonEmptyRowStart(sheet.rowIterator()) - 1
 
-      val headerRow = sheet.getRow(0)
-      val header = for (j <- 0 until numCols) yield headerRow.getCell(j).toString
+        val headerRow = sheet.getRow(0)
+        val header = for (j <- 0 until numCols) yield headerRow.getCell(j).toString
 
-      val rows = Array.ofDim[String](numRows, numCols)
+        val rows = Array.ofDim[String](numRows, numCols)
 
-      for (i <- 0 until numRows) {
-        for (j <- 0 until numCols) {
-          val cell = sheet.getRow(i + 1).getCell(j)
-          if (cell != null) {
-            rows(i)(j) = cell.toString
-          } else {
-            rows(i)(j) = ""
+        for (i <- 0 until numRows) {
+          for (j <- 0 until numCols) {
+            val cell = sheet.getRow(i + 1).getCell(j)
+            if (cell != null) {
+              rows(i)(j) = cell.toString
+            } else {
+              rows(i)(j) = ""
+            }
           }
         }
+        sheetMap(sheet.getSheetName) = new Sheet(header, rows.map(_.toSeq).toSeq)
       }
-      sheetMap(sheet.getSheetName) = new Sheet(header, rows.map(_.toSeq).toSeq)
-    }
 
-    sheetMap.toMap
+      sheetMap.toMap
+    } finally workbook.close()
   }
 
   // go through first column and find last non-empty row

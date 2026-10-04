@@ -13,12 +13,27 @@ class ApbMasterBfm(
     pready: Bool,
     pslverr: Bool
 ) {
-
-  /// Apply reset to the DUT
+  /**
+   * Apply reset to the DUT
+   */
   def reset(): Unit = {
+    psel.poke(0.B)
+    penable.poke(0.B)
+    paddr.poke(0.U)
+    pwrite.poke(0.B)
+    pwdata.poke(0.U)
     reset.poke(1.B)
     clock.step()
     reset.poke(0.B)
+  }
+
+  private def awaitReady(): Unit = {
+    var cycles = 0
+    while (!pready.peekBoolean() && cycles < 100) {
+      clock.step()
+      cycles += 1
+    }
+    require(pready.peekBoolean(), "APB transfer timed out after 100 wait cycles")
   }
 
   /**
@@ -41,7 +56,7 @@ class ApbMasterBfm(
     // access phase
     penable.poke(1.B)
 
-    while (!pready.peekBoolean()) clock.step()
+    awaitReady()
 
     val res = if (pslverr.peekBoolean()) None else Some(prdata.peekInt())
 
@@ -76,7 +91,7 @@ class ApbMasterBfm(
     // access phase
     penable.poke(1.B)
 
-    while (!pready.peekBoolean()) clock.step()
+    awaitReady()
 
     expected match {
       case None => pslverr.expect(1.B, s"Expected error on read at address 0x${address.toString(16)}")
@@ -98,7 +113,7 @@ class ApbMasterBfm(
   /**
     * Perform an APB write transaction
     * 
-    * Ignores any errors
+    * Returns Some(()) on success, or None on a slave error.
     *
     * @param address The address to write to
     * @param data The data to write
@@ -116,7 +131,7 @@ class ApbMasterBfm(
     // access phase
     penable.poke(1.B)
 
-    while (!pready.peekBoolean()) clock.step()
+    awaitReady()
 
     val res = if (pslverr.peekBoolean()) None else Some(())
 
