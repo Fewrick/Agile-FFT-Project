@@ -1,1 +1,4 @@
 lab4/.DS_Store
+.vscode
+.metals
+lab4/target/global-logging
