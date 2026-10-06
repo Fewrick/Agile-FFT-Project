@@ -1,2 +1,4 @@
 lab4/.DS_Store
 lab4/target/global-logging/sbt-global-log3262379419090197173.log
+.metals
+.vscode
