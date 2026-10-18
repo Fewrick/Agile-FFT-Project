@@ -3,9 +3,13 @@ package engine
 import scala.math._
 
 class FFTRadix2 {
+  private def validateLength(n: Int): Unit = {
+    require(n > 0 && (n & (n - 1)) == 0, "FFT length must be a positive power of 2")
+  }
+
   def fft(x : Seq[Int]) : (Seq[Int], Seq[Int]) = {
     val N = x.length
-    require(N > 0 && (N & (N - 1)) == 0, "FFT input length must be a power of 2")
+    validateLength(N)
 
     // Base case
     if (N == 1) {
@@ -43,6 +47,7 @@ class FFTRadix2 {
   def ifft(XRe: Seq[Int], XIm: Seq[Int]): (Seq[Int], Seq[Int])  = {
     require(XRe.length == XIm.length, "Number of real and imaginary elements should be equal")
     val N = XRe.length
+    validateLength(N)
 
     // Base case
     if (N == 1) {

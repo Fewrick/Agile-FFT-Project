@@ -4,6 +4,9 @@ import scala.math._
 
 class FFTFP {
   def fft(x: Seq[Double]) : (Seq[Double], Seq[Double]) = {
+    require(x.nonEmpty, "DFT input must not be empty")
+
+
     val N = x.length
     val XRe = new Array[Double](N)
     val XIm = new Array[Double](N)
@@ -23,7 +26,9 @@ class FFTFP {
   }
 
   def ifft(XRe: Seq[Double], XIm: Seq[Double]) : Seq[Double] = {
+    require(XRe.nonEmpty, "IDFT input must not be empty")
     require(XRe.length == XIm.length, "Number of real and imaginary elements should be equal")
+    
     val N = XRe.length
     val x = new Array[Double](N)
 
