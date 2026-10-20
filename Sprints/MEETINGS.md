@@ -58,3 +58,4 @@
     - Change the output of FFT to a Real and Imaginary part (it's already like that in software)
     - Run tests that compares to software implementation
 - Make graphs/spectrum of both software implementation
+- Integrate the scaling into [-1;1] for the software INT8 implementation
