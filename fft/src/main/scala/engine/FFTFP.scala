@@ -28,7 +28,7 @@ class FFTFP {
   def ifft(XRe: Seq[Double], XIm: Seq[Double]) : Seq[Double] = {
     require(XRe.nonEmpty, "IDFT input must not be empty")
     require(XRe.length == XIm.length, "Number of real and imaginary elements should be equal")
-    
+
     val N = XRe.length
     val x = new Array[Double](N)
 
