@@ -44,15 +44,24 @@ class FFTReferenceSpec extends AnyFunSuite {
     val input = Seq(1, 2, 3, 4)
 
     val (re, im) = radix2.fft(input)
-    val (xRe, xIm) = radix2.ifft(re, im)
+    val output = radix2.ifft(re, im)
 
-    assert(xRe == input)
-    assert(xIm == Seq.fill(input.length)(0))
+    assert(output == input)
   }
 
   test("Radix-2 FFT rejects non-power-of-two inputs") {
     intercept[IllegalArgumentException] {
       radix2.fft(Seq(1, 2, 3))
     }
+  }
+
+  test("Radix-2 FFT display") {
+    val input = Seq(127, 64, 0, -64, -127, -64, 0, 64)
+
+    val (freqRe, freqIm) = radix2.fft(input)
+    val output = radix2.ifft(freqRe, freqIm)
+
+    info(s"Original:      ${input.mkString(", ")}")
+    info(s"Reconstructed: ${output.mkString(", ")}")
   }
 }
