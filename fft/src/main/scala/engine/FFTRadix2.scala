@@ -2,6 +2,25 @@ package engine
 
 import scala.math._
 
+/*
+ * TODO: Define fixed-point quantization and scaling.
+ *
+ * Input samples are represented as signed 8-bit integers using
+ * symmetric quantization:
+ *   Floating-point range: [-1.0, 1.0]
+ *   Integer range:        [-127, 127]
+ *   Quantization scale:   127
+ *
+ * The forward FFT is unnormalized, so its output magnitude
+ * can grow by a factor of N. Intermediate values therefore
+ * require additional bit width or per-stage scaling.
+ *
+ * Currently, twiddle factors and butterfly calculations use
+ * floating-point arithmetic, with results rounded to Int.
+ * For hardware verification, define a fixed-point format
+ * and consistent rounding/overflow behavior.
+ */
+
 class FFTRadix2 {
   private def validateLength(n: Int): Unit = {
     require(n > 0 && (n & (n - 1)) == 0, "FFT length must be a positive power of 2")
