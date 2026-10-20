@@ -1,12 +1,12 @@
 import chisel3._
 import chiseltest._
 import org.scalatest.flatspec.AnyFlatSpec
-import fft.FFT
+import fft.DFT
 import scala.util.Random
 
 class FFTexample extends AnyFlatSpec with ChiselScalatestTester {
   "FFT" should "display example" in {
-    test(new FFT()) { dut =>
+    test(new DFT()) { dut =>
       println("Example 1 (constant):")
       example(dut, (0 until 32).map(i => 40))
 
@@ -21,7 +21,7 @@ class FFTexample extends AnyFlatSpec with ChiselScalatestTester {
     }
   }
 
-  def example(dut: FFT, seq: Seq[Int]) {
+  def example(dut: DFT, seq: Seq[Int]) {
     var sampleString = "samples: "
     for (i <- 0 until 32) {
       dut.io.input(i).poke(seq(i).U)
@@ -30,7 +30,7 @@ class FFTexample extends AnyFlatSpec with ChiselScalatestTester {
     println(sampleString)
     var freqString = "freqs:   "
     for (i <- 0 until 32) {
-      freqString += s"${dut.io.output(i).peek().litValue.toInt} "
+      freqString += s"${dut.io.outputRe(i).peek().litValue.toInt} "
     }
     println(freqString)
   }

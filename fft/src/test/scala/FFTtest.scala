@@ -10,7 +10,8 @@ class FFTtest extends AnyFlatSpec with ChiselScalatestTester {
         dut.io.input(i).poke(i.U)
       }
       for (i <- 0 until 32) {
-        dut.io.output(i).expect(i.U)
+        dut.io.outputRe(i).expect(i.U)
+        dut.io.outputIm(i).expect(i.U)
       }
     }
   }
