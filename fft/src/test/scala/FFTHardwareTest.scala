@@ -42,7 +42,7 @@ class FFTHardwareTest extends AnyFlatSpec with ChiselScalatestTester {
 
   behavior.of("FFT Hardware Module")
 
-  it("should correctly compute FFT for a DC input (all ones)") {
+  it should "correctly compute FFT for a DC input (all ones)" in {
     val N = 32
     test(new FFT(N)) { c =>
       // 1. Drive inputs (all 1s)
@@ -66,7 +66,7 @@ class FFTHardwareTest extends AnyFlatSpec with ChiselScalatestTester {
     }
   }
 
-  it("should match the software reference model for random inputs") {
+  it should "match the software reference model for random inputs" in {
     val N = 32
     val rand = new Random(42) // Fixed seed for reproducibility
 
