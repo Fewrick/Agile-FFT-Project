@@ -4,3 +4,9 @@
 !*.scala
 !.gitignore
 !build.sbt
+!co-simulation/
+co-simulation/*
+!co-simulation/fft.py
+!co-simulation/compare_fft.py
+!co-simulation/generate_sine.py
+!Makefile
