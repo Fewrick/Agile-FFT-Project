@@ -1,0 +1,38 @@
+name: Hardware test toolchain
+description: Java 17, pinned sbt and cached Verilator 5.044 on Ubuntu 24.04
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-java@v5
+      with:
+        distribution: temurin
+        java-version: '17'
+        cache: sbt
+    - uses: sbt/setup-sbt@v1
+    - name: Install native dependencies
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y help2man perl make autoconf clang flex bison libfl-dev
+    - uses: actions/cache@v4
+      id: verilator
+      with:
+        path: ${{ runner.tool_cache }}/nn2hl-verilator-5.044
+        key: ubuntu-24.04-${{ runner.arch }}-verilator-5.044-clang-${{ hashFiles('.github/actions/setup-hardware/action.yml') }}
+    - name: Build Verilator
+      if: steps.verilator.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        git clone --depth 1 --branch v5.044 https://github.com/verilator/verilator.git "$RUNNER_TEMP/verilator"
+        cd "$RUNNER_TEMP/verilator"
+        autoconf
+        ./configure --prefix="$RUNNER_TOOL_CACHE/nn2hl-verilator-5.044"
+        make -j2
+        make install
+    - name: Check native toolchain
+      shell: bash
+      run: |
+        echo "$RUNNER_TOOL_CACHE/nn2hl-verilator-5.044/bin" >> "$GITHUB_PATH"
+        "$RUNNER_TOOL_CACHE/nn2hl-verilator-5.044/bin/verilator" --version | grep -F 'Verilator 5.044'
+        clang++ --version
+        java -version
