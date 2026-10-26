@@ -5,7 +5,7 @@ import fft.FFT
 
 class FFTtest extends AnyFlatSpec with ChiselScalatestTester {
   "FFT" should "pass" in {
-    test(new FFT()) { dut =>
+    test(new FFT(32)) { dut =>
       for (i <- 0 until 32) {
         dut.io.input(i).poke(i.U)
       }

@@ -78,7 +78,7 @@ class FFTOutputTest extends AnyFlatSpec with ChiselScalatestTester {
     writeHex(outputDir.resolve("scala_radix2_imag.hex"), radixIm, 32)
 
     // Chisel FFT
-    test(new FFT) { dut =>
+    test(new FFT(32)) { dut =>
       for (i <- input.indices) {
         dut.io.input(i).poke((input(i) & 0xFF).U)
       }
@@ -96,7 +96,7 @@ class FFTOutputTest extends AnyFlatSpec with ChiselScalatestTester {
     }
 
     // Chisel DFT
-    test(new DFT) { dut =>
+    test(new DFT(32)) { dut =>
       for (i <- input.indices) {
         dut.io.input(i).poke((input(i) & 0xFF).U)
       }

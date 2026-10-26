@@ -24,8 +24,8 @@ class FFT(val N: Int) extends Module {
     odds.io.input := io.input.zipWithIndex.filter(_._2 % 2 == 1).map(_._1)
 
     for (k <- 0 until N/2) {
-      val cosFactor = (math.cos(2 * math.Pi * k * n / N) * 127).intValue.S(8.W)
-      val sinFactor = (math.sin(2 * math.Pi * k * n / N) * 127).intValue.S(8.W)
+      val cosFactor = (math.cos(2 * math.Pi * k / N) * 127).intValue.S(8.W)
+      val sinFactor = (math.sin(2 * math.Pi * k / N) * 127).intValue.S(8.W)
 
       // currently scaled to 8 bit by simply removing the least significant bits
       // (14,7) is presumably incorrect, and needs to be changed
@@ -39,5 +39,5 @@ class FFT(val N: Int) extends Module {
 }
 
 object FFT extends App {
-  emitVerilog(new FFT())
+  emitVerilog(new FFT(32))
 }
