@@ -20,3 +20,6 @@ co-simulation/*
 
 # Makefile
 !Makefile
+
+# Python
+!requirements.txt
