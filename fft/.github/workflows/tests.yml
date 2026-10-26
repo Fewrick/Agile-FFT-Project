@@ -1,0 +1,41 @@
+name: Regression tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: regression-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  regression:
+    name: Build image and run Scala tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup Python
+        uses: ./.github/actions/setup-python
+
+      - name: Setup hardware
+        uses: ./.github/actions/setup-hardware
+
+      - name: Build image
+        run: make image
+
+      - name: Run Scala and Chisel tests
+        run: sbt test

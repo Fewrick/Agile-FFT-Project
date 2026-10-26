@@ -1,12 +1,22 @@
 *
+
+# Keep scala/chisel project files
 !src/
 !src/**
 !*.scala
-!.gitignore
 !build.sbt
+
+# Github files
+!.github/
+!.github/**
+!.gitignore
+
+# Co-simulation
 !co-simulation/
 co-simulation/*
 !co-simulation/fft.py
 !co-simulation/compare_fft.py
 !co-simulation/generate_sine.py
+
+# Makefile
 !Makefile
