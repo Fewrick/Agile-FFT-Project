@@ -4,7 +4,7 @@ SAMPLES ?= 32
 CYCLES ?= 2
 AMPLITUDE ?= 127
 
-image: sine FFTOutput graph
+image: sine fft-output graph
 
 sine:
 	python co-simulation/generate_sine.py \
