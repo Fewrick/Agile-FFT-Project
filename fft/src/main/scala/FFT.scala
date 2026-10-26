@@ -1,39 +1,44 @@
 package fft
 
 import chisel3._
+import chisel3.util.log2Ceil
 
-class FFT(val N: Int) extends Module {
+class FFT(val N: Int = 32) extends Module {
+  require(N > 0 && (N & (N - 1)) == 0, "N must be a positive power of 2")
+
+  val SCALE = 127
+  val inputWidth = 8
+  val outputWidth = inputWidth + log2Ceil(N)
+
   val io = IO(new Bundle {
-    val input = Input(Vec(N, UInt(8.W)))
-    val outputRe = Output(Vec(N, UInt(8.W)))
-    val outputIm = Output(Vec(N, UInt(8.W)))
+    val input = Input(Vec(N, SInt(8.W)))
+    val outputRe = Output(Vec(N, SInt(outputWidth.W)))
+    val outputIm = Output(Vec(N, SInt(outputWidth.W)))
   })
-  // make sure that N > 0 and N is a power of 2
-  require(N > 0, "N must be greater than 0")
-  require((N & (N - 1)) == 0, "N must be a power of 2")
-
-  // the alorithm
-  if (N==1) {
-    io.outputRe := io.input
-    io.outputIm := io.input
+  if (N == 1) {
+    io.outputRe(0) := io.input(0)
+    io.outputIm(0) := 0.S
   } else {
-    val evens = Module(new FFT(N/2))
-    val odds = Module(new FFT(N/2))
+    val evens = Module(new FFT(N / 2))
+    val odds = Module(new FFT(N / 2))
 
     evens.io.input := io.input.zipWithIndex.filter(_._2 % 2 == 0).map(_._1)
     odds.io.input := io.input.zipWithIndex.filter(_._2 % 2 == 1).map(_._1)
 
-    for (k <- 0 until N/2) {
-      val cosFactor = (math.cos(2 * math.Pi * k * n / N) * 127).intValue.S(8.W)
-      val sinFactor = (math.sin(2 * math.Pi * k * n / N) * 127).intValue.S(8.W)
+    for (k <- 0 until N / 2) {
+      val angle = 2 * math.Pi * k / N
 
-      // currently scaled to 8 bit by simply removing the least significant bits
-      // (14,7) is presumably incorrect, and needs to be changed
-      io.outputRe(k) := evens.io.outputRe(k) + (cosFactor * odds.io.outputRe(k) - sinFactor * odds.io.outputIm(k))(14,7) 
-      io.outputIm(k) := evens.io.outputIm(k) + (cosFactor * odds.io.outputIm(k) + sinFactor * odds.io.outputRe(k))(14,7)
-      
-      io.outputRe(k + N/2) := evens.io.outputRe(k) - (cosFactor * odds.io.outputRe(k) - sinFactor * odds.io.outputIm(k))(14,7)
-      io.outputIm(k + N/2) := evens.io.outputIm(k) - (cosFactor * odds.io.outputIm(k) + sinFactor * odds.io.outputRe(k))(14,7)
+      val cosFactor = math.round(math.cos(angle) * SCALE).toInt.S(8.W)
+      val sinFactor = math.round(-math.sin(angle) * SCALE).toInt.S(8.W)
+
+      val tr = ((cosFactor * odds.io.outputRe(k)) -& (sinFactor * odds.io.outputIm(k))) / SCALE.S(8.W)
+      val ti = ((cosFactor * odds.io.outputIm(k)) +& (sinFactor * odds.io.outputRe(k))) / SCALE.S(8.W)
+
+      io.outputRe(k) := evens.io.outputRe(k) +& tr
+      io.outputIm(k) := evens.io.outputIm(k) +& ti
+
+      io.outputRe(k + N / 2) := evens.io.outputRe(k) -& tr
+      io.outputIm(k + N / 2) := evens.io.outputIm(k) -& ti
     }
   }
 }
