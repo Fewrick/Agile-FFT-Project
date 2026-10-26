@@ -4,41 +4,9 @@ import chisel3._
 import chiseltest._
 import org.scalatest.flatspec.AnyFlatSpec
 import scala.util.Random
+import engine.FFTRadix2
 
 class FFTHardwareTest extends AnyFlatSpec with ChiselScalatestTester {
-
-  // A software reference model mirroring our fixed-point scaling and logic
-  def softwareFFT(input: Seq[Int], N: Int): (Seq[Double], Seq[Double]) = {
-    if (N == 1) {
-      (Seq(input(0).toDouble), Seq(0.0))
-    } else {
-      val scale = 127.0
-      val evensIn = input.zipWithIndex.filter(_._2 % 2 == 0).map(_._1)
-      val oddsIn = input.zipWithIndex.filter(_._2 % 2 == 1).map(_._1)
-      
-      val (evenRe, evenIm) = softwareFFT(evensIn, N / 2)
-      val (oddRe, oddIm) = softwareFFT(oddsIn, N / 2)
-
-      val outRe = Array.fill(N)(0.0)
-      val outIm = Array.fill(N)(0.0)
-
-      for (k <- 0 until N / 2) {
-        val angle = 2 * math.Pi * k / N
-        val cosFactor = math.round(math.cos(angle) * scale)
-        val sinFactor = math.round(-math.sin(angle) * scale)
-
-        // Mirroring the fixed-point arithmetic
-        val tr = (cosFactor * oddRe(k) - sinFactor * oddIm(k)) / scale
-        val ti = (cosFactor * oddIm(k) + sinFactor * oddRe(k)) / scale
-
-        outRe(k)       = evenRe(k) + tr
-        outIm(k)       = evenIm(k) + ti
-        outRe(k + N/2) = evenRe(k) - tr
-        outIm(k + N/2) = evenIm(k) - ti
-      }
-      (outRe.toSeq, outIm.toSeq)
-    }
-  }
 
   behavior.of("FFT Hardware Module")
 
@@ -80,7 +48,7 @@ class FFTHardwareTest extends AnyFlatSpec with ChiselScalatestTester {
       }
 
       // Compute expected outputs using software golden model
-      val (expRe, expIm) = softwareFFT(inputVec, N)
+      val (expRe, expIm) = new FFTRadix2().fft(inputVec)
 
       // Verify each output bin against the golden model (allowing small rounding delta)
       for (i <- 0 until N) {
