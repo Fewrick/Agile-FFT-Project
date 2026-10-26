@@ -12,8 +12,7 @@ runs:
         python-version: '3.12'
         cache: pip
         cache-dependency-path: |
-          ci/requirements.txt
-          ci/training-requirements.txt
+          requirements.txt
     - name: Install numerical test dependencies
       shell: bash
       run: python -m pip install -r ci/requirements.txt
