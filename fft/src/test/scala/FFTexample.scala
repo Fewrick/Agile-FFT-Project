@@ -14,17 +14,17 @@ class FFTexample extends AnyFlatSpec with ChiselScalatestTester {
       example(dut, 0 until 32)
 
       println("Example 3: (sine)")
-      example(dut, (0 until 32).map(i => ((math.sin(i) + 1)*127).intValue))
+      example(dut, (0 until 32).map(i => (math.sin(i)*127).intValue))
 
       println("Example 3: (noise)")
-      example(dut, (0 until 32).map(i => ((Random.nextDouble()*255).intValue)))
+      example(dut, (0 until 32).map(i => (Random.nextInt(256) - 128)))
     }
   }
 
   def example(dut: DFT, seq: Seq[Int]) {
     var sampleString = "samples: "
     for (i <- 0 until 32) {
-      dut.io.input(i).poke(seq(i).U)
+      dut.io.input(i).poke(seq(i).S)
       sampleString += s"${seq(i)} "
     }
     println(sampleString)

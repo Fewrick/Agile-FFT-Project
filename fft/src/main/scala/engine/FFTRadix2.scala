@@ -6,11 +6,11 @@ import scala.math._
  * Radix-2 FFT/IFFT using fixed-point integer arithmetic.
  *
  * Input:
- *   Signed 8-bit samples in [-127, 127].
+ *   Signed 8-bit samples in [-128, 127].
  *   Quantization scale: 127.
  *
  * Twiddle factors:
- *   cos/sin are quantized to [-127, 127].
+ *   cos/sin are quantized to [-127, 127] using Math.round (floor(v + 0.5)).
  *   Complex multiplication is rescaled by dividing by 127.
  *
  * FFT:
@@ -58,8 +58,8 @@ class FFTRadix2 {
         val twiddleRe = (cos(angle)  * SCALE).round.toInt
         val twiddleIm = (-sin(angle) * SCALE).round.toInt
 
-        val tempRe = ((twiddleRe.toLong * oddRe(k) - twiddleIm * oddIm(k)) / SCALE).toInt
-        val tempIm = ((twiddleRe.toLong * oddIm(k) + twiddleIm * oddRe(k)) / SCALE).toInt
+        val tempRe = ((twiddleRe.toLong * oddRe(k) - twiddleIm.toLong * oddIm(k)) / SCALE).toInt
+        val tempIm = ((twiddleRe.toLong * oddIm(k) + twiddleIm.toLong * oddRe(k)) / SCALE).toInt
 
         XRe(k) = (evenRe(k) + tempRe)
         XIm(k) = (evenIm(k) + tempIm)
@@ -104,8 +104,8 @@ class FFTRadix2 {
         val twiddleRe = (cos(angle) * SCALE).round.toInt
         val twiddleIm = (sin(angle) * SCALE).round.toInt
 
-        val tempRe = ((twiddleRe.toLong * oRe(k) - twiddleIm * oIm(k)) / 127).toInt
-        val tempIm = ((twiddleRe.toLong * oIm(k) + twiddleIm * oRe(k)) / 127).toInt
+        val tempRe = ((twiddleRe.toLong * oRe(k) - twiddleIm.toLong * oIm(k)) / 127).toInt
+        val tempIm = ((twiddleRe.toLong * oIm(k) + twiddleIm.toLong * oRe(k)) / 127).toInt
 
         // Divide by 2 at every radix-2 stage.
         // Across log2(N) stages this gives the required 1/N.
