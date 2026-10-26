@@ -15,7 +15,7 @@ runs:
           requirements.txt
     - name: Install numerical test dependencies
       shell: bash
-      run: python -m pip install -r ci/requirements.txt
+      run: python -m pip install -r requirements.txt
     - name: Install CPU training-test dependencies
       if: inputs.training-tests == 'true'
       shell: bash
