@@ -34,8 +34,8 @@ jobs:
       - name: Setup hardware
         uses: ./.github/actions/setup-hardware
 
-      - name: Build image
-        run: make image
+      - name: Generate sine
+        run: make sine
 
       - name: Run Scala and Chisel tests
         run: sbt test
