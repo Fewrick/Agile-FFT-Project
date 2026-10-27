@@ -3,16 +3,28 @@ package top
 import chisel3._
 import chisel3.util.log2Ceil
 
-class DSPTop() extends Module {
+class DSPTop(val FFTSize : Int = 32) extends Module {
+    val InputDataWidth = 8
+    val OutputDataWidth = InputDataWidth + log2Ceil(FFTSize)
+    val InputAddrWidth = log2Ceil(FFTSize)
+    val OutputAddrWidth = log2Ceil(FFTSize)
+
     val io = IO(new Bundle {
+        // Input Memory
         val writeData = Input(SInt(InputDataWidth.W))
         val writeAddr = Input(UInt(InputAddrWidth.W))
-        val wr_en = Input(Bool())
-        val start = Input(Bool())
+        val writeEn = Input(Bool())
 
+        // Processing control
+        val start = Input(Bool())
+        val busy = Output(Bool())
+        val done = Output(Bool())
+
+        // Output Memory
         val readData = Output(SInt(OutputDataWidth.W))
         val readAddr = Input(UInt(OutputAddrWidth.W))
-        val done = Output(Bool())
+        val readEn = Input(Bool())
+        
     })
 
 
