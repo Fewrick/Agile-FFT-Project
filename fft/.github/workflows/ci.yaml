@@ -1,0 +1,52 @@
+name: Scala Tests
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    env:
+      VERILATOR_VERSION: "5.044"
+      VERILATOR_INSTALL: /home/runner/verilator-install
+      CC: clang
+      CXX: clang++
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: sbt
+
+      - name: Setup sbt
+        uses: sbt/setup-sbt@v1
+
+      - name: Cache Verilator
+        id: cache-verilator
+        uses: actions/cache@v4
+        with:
+          path: /home/runner/verilator-install
+          key: ${{ runner.os }}-${{ runner.arch }}-verilator-${{ env.VERILATOR_VERSION }}-clang
+
+      - name: Install Verilator
+        if: steps.cache-verilator.outputs.cache-hit != 'true'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y git help2man perl make autoconf clang flex bison libfl-dev
+          git clone --depth 1 --branch v$VERILATOR_VERSION https://github.com/verilator/verilator.git /tmp/verilator
+          cd /tmp/verilator
+          autoconf
+          ./configure --prefix=$VERILATOR_INSTALL
+          make -j$(nproc)
+          make install
+
+      - name: Add Verilator to PATH
+        run: echo "$VERILATOR_INSTALL/bin" >> "$GITHUB_PATH"
+
+      - name: Run tests
+        run: make test-operators
