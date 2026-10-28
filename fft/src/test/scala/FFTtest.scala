@@ -1,7 +1,7 @@
 import chisel3._
 import chiseltest._
 import org.scalatest.flatspec.AnyFlatSpec
-import fft.FFT
+import fft._
 
 class FFTtest extends AnyFlatSpec with ChiselScalatestTester {
   //"FFT" should "pass" in {

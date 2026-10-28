@@ -7,7 +7,7 @@ import chiseltest.simulator.VerilatorBackendAnnotation
 import org.scalatest.flatspec.AnyFlatSpec
 
 import engine.{FFTFP, FFTRadix2}
-import fft.{FFT, DFT}
+import fft.{FFTComb, DFT}
 
 import java.nio.file.{Files, Path, Paths}
 import scala.io.Source
@@ -79,7 +79,7 @@ class FFTOutputTest extends AnyFlatSpec with ChiselScalatestTester {
     writeHex(outputDir.resolve("scala_radix2_imag.hex"), radixIm, 32)
 
     // Chisel FFT
-    test(new FFT()).withAnnotations(simulator) { dut =>
+    test(new FFTComb()).withAnnotations(simulator) { dut =>
       for (i <- input.indices) {
         dut.io.input(i).poke(input(i).S)
       }

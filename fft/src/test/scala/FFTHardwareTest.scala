@@ -12,7 +12,7 @@ class FFTHardwareTest extends AnyFlatSpec with ChiselScalatestTester {
 
   it should "correctly compute FFT for a DC input (all ones)" in {
     val N = 32
-    test(new FFT(N)) { c =>
+    test(new FFTComb(N)) { c =>
       // 1. Drive inputs (all 1s)
       for (i <- 0 until N) {
         c.io.input(i).poke(1.S)
@@ -38,7 +38,7 @@ class FFTHardwareTest extends AnyFlatSpec with ChiselScalatestTester {
     val N = 32
     val rand = new Random(42) // Fixed seed for reproducibility
 
-    test(new FFT(N)) { c =>
+    test(new FFTComb(N)) { c =>
       // Generate random 8-bit signed inputs (-128 to 127)
       val inputVec = Seq.fill(N)(rand.nextInt(128) - 64)
 

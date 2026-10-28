@@ -3,6 +3,8 @@ package top
 import chisel3._
 import chisel3.util.log2Ceil
 
+import fft._
+
 class DSPTop(val FFTSize : Int = 32) extends Module {
     val InputDataWidth = 8
     val OutputDataWidth = InputDataWidth + log2Ceil(FFTSize)
@@ -24,11 +26,13 @@ class DSPTop(val FFTSize : Int = 32) extends Module {
         val readData = Output(SInt(OutputDataWidth.W))
         val readAddr = Input(UInt(OutputAddrWidth.W))
         val readEn = Input(Bool())
-        
     })
 
+    val memA = SyncReadMem(FFTSize, SInt(InputDataWidth.W))
 
-    val fft = Module(new FFT(32))
+    val fft = Module(new FFTSeq()) // TODO: replace with sequential FFT module
+
+    val memB = SyncReadMem(FFTSize, SInt(OutputDataWidth.W))
 
 
 }
