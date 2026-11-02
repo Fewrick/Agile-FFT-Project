@@ -67,12 +67,12 @@ class FFTHardwareTest extends AnyFlatSpec with ChiselScalatestTester {
 
     test(new IFFTComb(N)) { c =>
       for (i <- 0 until N) {
-        c.io.inputRe(i).poke((if (i == 0) N else 0).S)
+        c.io.inputRe(i).poke((if (i == 0) N * 127 else 0).S)
         c.io.inputIm(i).poke(0.S)
       }
 
       for (i <- 0 until N) {
-        assert(c.io.outputRe(i).peek().litValue == 1L, s"Sample $i real mismatch")
+        assert(c.io.outputRe(i).peek().litValue == 127L, s"Sample $i real mismatch")
         assert(c.io.outputIm(i).peek().litValue == 0L, s"Sample $i imaginary mismatch")
       }
     }
