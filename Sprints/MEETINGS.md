@@ -59,3 +59,24 @@
     - Run tests that compares to software implementation
 - Make graphs/spectrum of both software implementation
 - Integrate the scaling into [-1;1] for the software INT8 implementation
+
+# Meeting 4 (03/11/2026)
+- Fred and Robert not here, we do not know how far they are (Fred says he has something on a branch)
+    - If HW test is not done (as of now), the task needs to be taken over by someone else who can finalize it
+        - We need it
+        - Robert needs to also help on other parts of the project before it/they becomes too complex to get up to speed with
+- FFTseq has been set up, but not done at all (NEEDS TO BE DONE ASAP)
+- UART IO has been made, needs testing
+- Bandpass filter has been started on, but needs corrections (generally not "done")
+- We have "synthesized" the combinatorical versions (with 32 samples), but failed (too many IOs)
+    - Should work with UART (which should only have 2x IO)
+- MADS BRINGS CAKE NEXT WEEK (maybe next week again)
+- Besides our in-class meetings on Tuesdays, we would like to have an additional status meeting (for like, 30 minutes so that it can fit into a tight schedule + you don't have to sit at home)
+    - Marilouise is suggesting either Saturday or Sunday
+    - Sebastian prefers Saturday
+
+## What now?
+- Marilouise continues on the filter
+- Mads works on seq. FFT
+- Sebastian tests UART and would like to make a script to test it automatically(?)
+- Fred and Robert needs to figure out what they're doing
