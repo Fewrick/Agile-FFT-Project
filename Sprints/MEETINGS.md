@@ -80,3 +80,9 @@
 - Mads works on seq. FFT
 - Sebastian tests UART and would like to make a script to test it automatically(?)
 - Fred and Robert needs to figure out what they're doing
+
+## Deadlines
+- We are setting a deadline for ALL implementation on **12:00 (lunchtime) Tuesday the 17th of November**
+- Presentation done **12:00 Tuesday the 1st of December**
+- Readme and final repo done **17:00 Tuesday the 1st of December**
+    - Martin is grading our projects in the evening after our presentation
