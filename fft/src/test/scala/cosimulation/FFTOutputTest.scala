@@ -1,13 +1,11 @@
 
-package comparison
+package cosimulation
 
 import chisel3._
 import chiseltest._
 import chiseltest.simulator.VerilatorBackendAnnotation
+import fft.{DFT, FFTComb}
 import org.scalatest.flatspec.AnyFlatSpec
-
-import engine.{FFTFP, FFTRadix2}
-import fft.{FFTComb, DFT}
 
 import java.nio.file.{Files, Path, Paths}
 import scala.io.Source

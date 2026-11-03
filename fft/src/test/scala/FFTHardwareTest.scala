@@ -4,7 +4,7 @@ import chisel3._
 import chiseltest._
 import org.scalatest.flatspec.AnyFlatSpec
 import scala.util.Random
-import engine.FFTRadix2
+import cosimulation.FFTRadix2
 
 class FFTHardwareTest extends AnyFlatSpec with ChiselScalatestTester {
 
