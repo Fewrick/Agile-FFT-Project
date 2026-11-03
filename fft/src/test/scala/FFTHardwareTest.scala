@@ -21,8 +21,8 @@ class FFTHardwareTest extends AnyFlatSpec with ChiselScalatestTester {
       // 2. Since it's combinational, values propagate immediately.
       // For DC input, bin 0 should be N (scaled), and others 0.
       for (i <- 0 until N) {
-        val re = c.io.outputRe(i).peek().litValue
-        val im = c.io.outputIm(i).peek().litValue
+        val re = c.io.output(i).re.peek().litValue
+        val im = c.io.output(i).im.peek().litValue
         
         if (i == 0) {
           assert(re == N.toLong, s"DC bin 0 real expected $N, got $re")
@@ -52,8 +52,8 @@ class FFTHardwareTest extends AnyFlatSpec with ChiselScalatestTester {
 
       // Verify each output bin against the golden model (allowing small rounding delta)
       for (i <- 0 until N) {
-        val hwRe = c.io.outputRe(i).peek().litValue.toDouble
-        val hwIm = c.io.outputIm(i).peek().litValue.toDouble
+        val hwRe = c.io.output(i).re.peek().litValue.toDouble
+        val hwIm = c.io.output(i).im.peek().litValue.toDouble
 
         // Allow a delta of +/- 2 due to fixed-point rounding accumulation
         assert(math.abs(hwRe - expRe(i)) <= 2.0, f"Bin $i Real mismatch: HW=$hwRe, Expected=${expRe(i)}")

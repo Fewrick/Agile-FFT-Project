@@ -17,10 +17,7 @@ class FFTOutputTest extends AnyFlatSpec with ChiselScalatestTester {
   behavior of "FFT output generation"
 
   private val outputDir = Paths.get("co-simulation")
-
-  private val inputPath = Paths.get(
-    sys.env.getOrElse("FFT_INPUT", outputDir.resolve("sine.hex").toString)
-  )
+  private val inputPath = Paths.get(sys.env.getOrElse("FFT_INPUT", outputDir.resolve("sine.hex").toString))
 
   private val simulator = sys.env.get("FFT_SIMULATOR") match {
     case Some("verilator") => Seq(VerilatorBackendAnnotation)
@@ -46,9 +43,7 @@ class FFTOutputTest extends AnyFlatSpec with ChiselScalatestTester {
     val digits = (bits + 3) / 4
     val mask = (1L << bits) - 1
 
-    val lines = values.map { value =>
-      ("%0" + digits + "X").format(value.toLong & mask)
-    }
+    val lines = values.map { value => ("%0" + digits + "X").format(value.toLong & mask) }
 
     Files.write(path, (lines.mkString("\n") + "\n").getBytes("UTF-8"))
   }
@@ -84,9 +79,9 @@ class FFTOutputTest extends AnyFlatSpec with ChiselScalatestTester {
         dut.io.input(i).poke(input(i).S)
       }
 
-      val real = (0 until 32).map { i => dut.io.outputRe(i).peek().litValue.toInt }
+      val real = (0 until 32).map { i => dut.io.output(i).re.peek().litValue.toInt }
 
-      val imag = (0 until 32).map { i => dut.io.outputIm(i).peek().litValue.toInt }
+      val imag = (0 until 32).map { i => dut.io.output(i).im.peek().litValue.toInt }
 
       writeHex(outputDir.resolve("chisel_fft_real.hex"), real, dut.outputWidth)
       writeHex(outputDir.resolve("chisel_fft_imag.hex"), imag, dut.outputWidth)
@@ -98,8 +93,8 @@ class FFTOutputTest extends AnyFlatSpec with ChiselScalatestTester {
         dut.io.input(i).poke(input(i).S)
       }
 
-      val real = (0 until 32).map { i => dut.io.outputRe(i).peek().litValue.toInt }
-      val imag = (0 until 32).map { i => dut.io.outputIm(i).peek().litValue.toInt }
+      val real = (0 until 32).map { i => dut.io.output(i).re.peek().litValue.toInt }
+      val imag = (0 until 32).map { i => dut.io.output(i).im.peek().litValue.toInt }
 
       writeHex(outputDir.resolve("chisel_dft_real.hex"), real, dut.outputWidth)
       writeHex(outputDir.resolve("chisel_dft_imag.hex"), imag, dut.outputWidth)
