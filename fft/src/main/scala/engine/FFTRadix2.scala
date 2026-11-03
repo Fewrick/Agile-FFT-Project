@@ -27,7 +27,7 @@ import scala.math._
  *   Division truncates toward zero.
  */
 
-class FFTRadix2 {
+object FFTRadix2 {
   val SCALE = 127
 
   private def validateLength(n: Int): Unit = {

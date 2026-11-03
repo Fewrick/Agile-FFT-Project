@@ -4,6 +4,8 @@ import chisel3._
 import chiseltest._
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
+import engine.FFTRadix2
+import interfaces.ComplexSample
 
 class FFTDspTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
 
@@ -13,6 +15,8 @@ class FFTDspTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
     val samples = 32
     val inputWidth = 8
     val inputData = (0 until samples).map(i => i - 16)
+
+    val (expectedRe, expectedIm) = FFTRadix2.fft(inputData)
 
     test(new FFTDsp(inputWidth, samples)) { dut =>
 
@@ -64,8 +68,8 @@ class FFTDspTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
         // SyncReadMem has one-cycle read latency
         dut.clock.step()
 
-        dut.io.readData.re.expect(inputData(i).S)
-        dut.io.readData.im.expect(0.S)
+        dut.io.readData.re.expect(expectedRe(i).S)
+        dut.io.readData.im.expect(expectedIm(i).S)
       }
 
       dut.io.readEn.poke(false.B)

@@ -48,7 +48,7 @@ class FFTHardwareTest extends AnyFlatSpec with ChiselScalatestTester {
       }
 
       // Compute expected outputs using software golden model
-      val (expRe, expIm) = new FFTRadix2().fft(inputVec)
+      val (expRe, expIm) = FFTRadix2.fft(inputVec)
 
       // Verify each output bin against the golden model (allowing small rounding delta)
       for (i <- 0 until N) {

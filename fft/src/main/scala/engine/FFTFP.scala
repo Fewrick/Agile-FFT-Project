@@ -2,7 +2,7 @@ package engine
 
 import scala.math._
 
-class FFTFP {
+object FFTFP {
   def fft(x: Seq[Double]) : (Seq[Double], Seq[Double]) = {
     require(x.nonEmpty, "DFT input must not be empty")
 
