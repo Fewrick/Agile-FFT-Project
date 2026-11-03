@@ -1,7 +1,7 @@
 package fft
 
 import chisel3._
-import chisel3.util.log2Ceil
+import chisel3.util._
 import interfaces._
 
 class FFTSeq(val inputWidth : Int, val samples : Int) extends Module {
@@ -13,6 +13,7 @@ class FFTSeq(val inputWidth : Int, val samples : Int) extends Module {
 
     // Temporary placeholder
     io.in.ready := io.out.ready
-    io.out.data := io.in.data
+    io.out.data.re := io.in.data
+    io.out.data.im := 0.S(outputWidth.W)
     io.out.valid := io.in.valid
 }

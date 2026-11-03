@@ -23,7 +23,7 @@ abstract class DspTop[T <: Data](val inputDataWidth : Int, val samples : Int, ou
     val done = Output(Bool())
 
     // Output Memory
-    val readData = Output(chiselTypeOf(outputGen))
+    val readData = Output(outputGen)
     val readAddr = Input(UInt(outputAddrWidth.W))
     val readEn = Input(Bool())
   })
