@@ -4,8 +4,8 @@ import chisel3._
 import chisel3.util.log2Ceil
 import interfaces._
 
-class FFTSeq(val inputWidth : Int, val FFTSize : Int) extends Module {
-    val outputWidth = inputWidth + log2Ceil(FFTSize)
+class FFTSeq(val inputWidth : Int, val samples : Int) extends Module {
+    val outputWidth = inputWidth + log2Ceil(samples)
     val io = IO(new Bundle {
         val in = Flipped(new DSPIO(SInt(inputWidth.W)))
         val out = new DSPIO(new ComplexSample(outputWidth))

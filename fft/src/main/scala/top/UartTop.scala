@@ -4,7 +4,7 @@ import chisel3._
 import chisel3.util._
 import chisel.lib.uart._
 
-class UartTop(val freq: Int, val baud: Int, val samples: Int = 32) extends Module {
+class UartTop(val freq : Int, val baud : Int, val samples : Int = 32, val width : Int = 8) extends Module {
   val io = IO(new Bundle {
     val rx = Input(Bool())
     val tx = Output(Bool())
@@ -19,7 +19,7 @@ class UartTop(val freq: Int, val baud: Int, val samples: Int = 32) extends Modul
   rx.io.rxd := io.rx
   rx.io.channel.ready := false.B
 
-  val dspTop = Module(new EmptyDsp(samples))
+  val dspTop = Module(new EmptyDsp(width, samples))
   dspTop.io.writeData := DontCare
   dspTop.io.writeAddr := DontCare
   dspTop.io.writeEn := false.B
