@@ -6,7 +6,7 @@ import chisel3.util._
 import fft._
 import interfaces.ComplexSample
 
-class FFTDsp(override val inputDataWidth : Int, override val samples : Int) extends DspTop(inputDataWidth, samples) {
+class FFTDsp(override val inputDataWidth : Int, override val samples : Int) extends DspTop(inputDataWidth, samples, new ComplexSample(inputDataWidth + log2Ceil(samples))) {
 
     val fft = Module(new FFTSeq(inputDataWidth, samples))
 
@@ -16,30 +16,109 @@ class FFTDsp(override val inputDataWidth : Int, override val samples : Int) exte
 
     // FSM
     object State extends ChiselEnum {
-        val IDLE, LOAD, FFT, DONE = Value
+        val IDLE, READ, SEND, DRAIN, DONE = Value
     }; import State._
     val state = RegInit(IDLE)
 
-    // Write into input memory
-    when (io.writeEn & !io.busy) {
+    // Counters
+    val inputIndex = RegInit(0.U(inputAddrWidth.W))
+    val outputIndex = RegInit(0.U(outputAddrWidth.W))
+
+    val outputComplete = RegInit(false.B)
+
+    val lastIndex = (samples - 1).U
+
+    // Control outputs
+    val busy = state =/= IDLE && state =/= DONE
+    val done = state === DONE
+    io.busy := busy
+    io.done := done
+
+    // -------------------------
+    // Input memory write
+    // -------------------------
+
+    when(io.writeEn && !busy && !io.start) {
         memIn.write(io.writeAddr, io.writeData)
     }
 
-    when (io.start) {
-        io.busy := 1.B
-        io.done := 0.B
-        // Start FFT chain
+    // -------------------------
+    // Input memory read
+    // -------------------------
+
+    fft.io.in.data := memIn.read(inputIndex, state === READ)
+    fft.io.in.valid := state === SEND
+
+    // -------------------------
+    // FFT output
+    // -------------------------
+
+    fft.io.out.ready := io.busy
+
+    when(fft.io.out.fire) {
+        memFFT.write(outputIndex, fft.io.out.data)
+
+        when(outputIndex === lastIndex) {
+            outputComplete := true.B
+        }.otherwise {
+            outputIndex := outputIndex + 1.U
+        }
+
+        // -------------------------
+        // Output memory read
+        // -------------------------
+
+        val readData = memFFT.read(io.readAddr, io.readEn && state === DONE)
+
+        io.readData := readData
+
+        // -------------------------
+        // State machine
+        // -------------------------
+
+        switch(state) {
+            is(IDLE) {
+                when(io.start) {
+                    inputIndex := 0.U
+                    outputIndex := 0.U
+                    outputComplete := false.B
+                    state := READ
+                }
+            }
+
+            is(READ) {
+                // Issue synchronous memory read.
+                state := SEND
+            }
+
+            is(SEND) {
+                // Wait until FFT accepts input data.
+                when(fft.io.in.ready) {
+                    when(inputIndex === lastIndex) {
+                        state := DRAIN
+                    }.otherwise {
+                        inputIndex := inputIndex + 1.U
+                        state := READ
+                    }
+                }
+            }
+
+            is(DRAIN) {
+                // Wait until all FFT outputs have been written into memFFT.
+                when(outputComplete) {
+                    state := DONE
+                }
+            }
+
+            is(DONE) {
+                when(io.start) {
+                    inputIndex := 0.U
+                    outputIndex := 0.U
+                    outputComplete := false.B
+
+                    state := READ
+                }
+            }
+        }
     }
-
-    when(fft.io.out.valid) {
-        memFFT.write(0.U, fft.io.out.data)
-    }
-
-
-
-
-
-
-
-
 }

@@ -3,10 +3,9 @@ package top
 import chisel3._
 import chisel3.util._
 
-abstract class DspTop(val inputDataWidth : Int, val samples : Int) extends Module {
+abstract class DspTop[T <: Data](val inputDataWidth : Int, val samples : Int, outputGen: T) extends Module {
   require(inputDataWidth > 0)
   require((samples >= 2) & ((samples & (samples - 1)) == 0))
-
 
   val outputDataWidth = inputDataWidth + log2Ceil(samples)
   val inputAddrWidth = log2Ceil(samples)
@@ -24,7 +23,7 @@ abstract class DspTop(val inputDataWidth : Int, val samples : Int) extends Modul
     val done = Output(Bool())
 
     // Output Memory
-    val readData = Output(SInt(outputDataWidth.W))
+    val readData = Output(chiselTypeOf(outputGen))
     val readAddr = Input(UInt(outputAddrWidth.W))
     val readEn = Input(Bool())
   })

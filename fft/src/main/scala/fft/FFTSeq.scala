@@ -12,7 +12,7 @@ class FFTSeq(val inputWidth : Int, val samples : Int) extends Module {
     })
 
     // Temporary placeholder
-    io.in.ready := false.B
-    io.out.data := 0.U.asTypeOf(io.out.data)
-    io.out.valid := false.B
+    io.in.ready := io.out.ready
+    io.out.data := io.in.data
+    io.out.valid := io.in.valid
 }

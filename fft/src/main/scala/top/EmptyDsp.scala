@@ -2,7 +2,7 @@ package top
 
 import chisel3._
 
-class EmptyDsp(override val inputDataWidth : Int, override val samples : Int) extends DspTop(inputDataWidth, samples) {
+class EmptyDsp(override val inputDataWidth : Int, override val samples : Int) extends DspTop(inputDataWidth, samples, SInt()) {
   val mem = SyncReadMem(samples, SInt(inputDataWidth.W))
 
   when (io.writeEn) {
