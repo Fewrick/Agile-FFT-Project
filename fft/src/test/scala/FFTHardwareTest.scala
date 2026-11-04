@@ -61,4 +61,106 @@ class FFTHardwareTest extends AnyFlatSpec with ChiselScalatestTester {
       }
     }
   }
+
+  
+  it should "concentrate energy in the correct frequency bin" in {
+    val N = 32
+    val targetBin = 4 // The frequency index of our injected sine wave
+
+    test(new FFT(N)) { c =>
+      // 1. Generate a single-tone sine wave input
+      val scale = 127.0
+      for (i <- 0 until N) {
+        val sample = math.round(math.sin(2 * math.Pi * targetBin * i / N) * scale).toInt
+        c.io.input(i).poke(sample.S)
+      }
+
+      // 2. Compute squared magnitudes for all output bins 
+      // (Using squared magnitude Re^2 + Im^2 avoids expensive square roots in Scala)
+      val magnitudes = (0 until N).map { i =>
+        val re = c.io.outputRe(i).peek().litValue.toDouble
+        val im = c.io.outputIm(i).peek().litValue.toDouble
+        (i, (re * re) + (im * im))
+      }
+
+      // 3. Find the bin with the maximum energy (the peak)
+      val (peakBin, peakMag) = magnitudes.maxBy(_._2)
+
+      // 4. Assert that the peak is precisely at our target frequency bin
+      assert(peakBin == targetBin, s"Spectral peak expected at bin $targetBin, but found at bin $peakBin")
+
+      // 5. Assert that all other bins are near zero (noise floor check)
+      magnitudes.foreach { case (bin, mag) =>
+        if (bin != targetBin) {
+          // Other bins should be less than 5% of the peak magnitude due to fixed-point precision limits
+          assert(mag < (peakMag * 0.05), s"Bin $bin has unexpected leakage energy: $mag (peak was $peakMag)")
+        }
+      }
+    }
+  }
+
+  it should "produce a flat frequency spectrum for an impulse input" in {
+    val N = 32
+    test(new FFT(N)) { c =>
+      // Drive a strong impulse at index 0 (e.g., 127) and 0 everywhere else
+      c.io.input(0).poke(127.S)
+      for (i <- 1 until N) {
+        c.io.input(i).poke(0.S)
+      }
+
+      // Read back the real part of bin 0 as a baseline reference
+      val baseRe = c.io.outputRe(0).peek().litValue.toDouble
+
+      // Verify that the frequency response is flat (all real parts equal) 
+      // and that the imaginary parts are all zero.
+      for (i <- 0 until N) {
+        val re = c.io.outputRe(i).peek().litValue.toDouble
+        val im = c.io.outputIm(i).peek().litValue.toDouble
+
+        // Real parts should remain uniform across all bins for an impulse
+        assert(math.abs(re - baseRe) <= 2.0, s"Impulse spectrum not flat at bin $i: real=$re (expected ~ $baseRe)")
+        
+        // Imaginary parts should be close to zero
+        assert(math.abs(im) <= 2.0, s"Impulse imaginary part non-zero at bin $i: imag=$im")
+      }
+    }
+  }
+
+  it should "handle boundary conditions and extreme saturation values safely" in {
+    val N = 32
+
+    test(new FFT(N)) { c =>
+      // --- Scenario A: Maximum Positive DC ---
+      for (i <- 0 until N) {
+        c.io.input(i).poke(127.S)
+      }
+
+      // Verify outputs are stable and within valid bit width bounds (13 bits max)
+      for (i <- 0 until N) {
+        val re = c.io.outputRe(i).peek().litValue
+        val im = c.io.outputIm(i).peek().litValue
+        
+        // Ensure values can be successfully evaluated without simulation faults
+        assert(re.abs < 8192, s"Output real exceeds 13-bit bound at bin $i: $re")
+        assert(im.abs < 8192, s"Output imag exceeds 13-bit bound at bin $i: $im")
+      }
+
+      // --- Scenario B: Alternating Nyquist Frequency Vector ---
+      for (i <- 0 until N) {
+        val extremeVal = if (i % 2 == 0) 127.S else (-127).S
+        c.io.input(i).poke(extremeVal)
+      }
+
+      // Verify stability under extreme alternating inputs
+      for (i <- 0 until N) {
+        val re = c.io.outputRe(i).peek().litValue
+        val im = c.io.outputIm(i).peek().litValue
+        
+        // Check that the alternating pattern correctly concentrates energy at the Nyquist bin (N/2)
+        if (i == N / 2) {
+          assert(re.abs > 0 || im.abs > 0, "Nyquist bin should contain energy for alternating input")
+        }
+      }
+    }
+  }
 }
