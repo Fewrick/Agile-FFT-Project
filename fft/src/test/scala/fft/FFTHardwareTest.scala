@@ -64,37 +64,43 @@ class FFTHardwareTest extends AnyFlatSpec with ChiselScalatestTester {
   }
 
   
-  it should "concentrate energy in the correct frequency bin" in {
+  it should "concentrate energy in the correct frequency bins" in {
     val N = 32
-    val targetBin = 4 // The frequency index of our injected sine wave
+    val targetBin = 4
+    val mirrorBin = N - targetBin
 
     test(new FFTComb(N)) { c =>
-      // 1. Generate a single-tone sine wave input
+
+      // Generate single-tone sine wave
       val scale = 127.0
+
       for (i <- 0 until N) {
         val sample = math.round(math.sin(2 * math.Pi * targetBin * i / N) * scale).toInt
         c.io.input(i).poke(sample.S)
       }
 
-      // 2. Compute squared magnitudes for all output bins 
-      // (Using squared magnitude Re^2 + Im^2 avoids expensive square roots in Scala)
+      // Compute squared magnitudes
       val magnitudes = (0 until N).map { i =>
         val re = c.io.output(i).re.peek().litValue.toDouble
         val im = c.io.output(i).im.peek().litValue.toDouble
-        (i, (re * re) + (im * im))
+        (i, re * re + im * im)
       }
 
-      // 3. Find the bin with the maximum energy (the peak)
-      val (peakBin, peakMag) = magnitudes.maxBy(_._2)
+      val peakMag = magnitudes(targetBin)._2
+      val mirrorMag = magnitudes(mirrorBin)._2
 
-      // 4. Assert that the peak is precisely at our target frequency bin
-      assert(peakBin == targetBin, s"Spectral peak expected at bin $targetBin, but found at bin $peakBin")
+      // Both frequency bins should contain equal energy
+      assert(math.abs(peakMag - mirrorMag) <= peakMag * 0.01, s"Expected symmetric peaks at bins $targetBin and $mirrorBin")
 
-      // 5. Assert that all other bins are near zero (noise floor check)
+      // Verify that the expected bins have the highest energy
+      val maxMagnitude = magnitudes.map(_._2).max
+
+      assert(peakMag == maxMagnitude)
+
+      // All other frequency bins should have minimal energy
       magnitudes.foreach { case (bin, mag) =>
-        if (bin != targetBin) {
-          // Other bins should be less than 5% of the peak magnitude due to fixed-point precision limits
-          assert(mag < (peakMag * 0.05), s"Bin $bin has unexpected leakage energy: $mag (peak was $peakMag)")
+        if (bin != targetBin && bin != mirrorBin) {
+          assert(mag < peakMag * 0.05, s"Bin $bin has unexpected leakage energy: $mag")
         }
       }
     }
