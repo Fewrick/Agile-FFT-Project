@@ -13,10 +13,16 @@
 
 # Co-simulation
 !co-simulation/
-co-simulation/*
 !co-simulation/fft.py
 !co-simulation/compare_fft.py
 !co-simulation/generate_sine.py
 
 # Makefile
 !Makefile
+
+# Python
+!requirements.txt
+
+# Vivado files
+!vivado/
+!vivado/**
