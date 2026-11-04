@@ -5,6 +5,7 @@ import chiseltest._
 import org.scalatest.flatspec.AnyFlatSpec
 import scala.util.Random
 import cosimulation.FFTRadix2
+import fft.FFTComb
 
 class FFTHardwareTest extends AnyFlatSpec with ChiselScalatestTester {
 
@@ -67,7 +68,7 @@ class FFTHardwareTest extends AnyFlatSpec with ChiselScalatestTester {
     val N = 32
     val targetBin = 4 // The frequency index of our injected sine wave
 
-    test(new FFT(N)) { c =>
+    test(new FFTComb(N)) { c =>
       // 1. Generate a single-tone sine wave input
       val scale = 127.0
       for (i <- 0 until N) {
@@ -78,8 +79,8 @@ class FFTHardwareTest extends AnyFlatSpec with ChiselScalatestTester {
       // 2. Compute squared magnitudes for all output bins 
       // (Using squared magnitude Re^2 + Im^2 avoids expensive square roots in Scala)
       val magnitudes = (0 until N).map { i =>
-        val re = c.io.outputRe(i).peek().litValue.toDouble
-        val im = c.io.outputIm(i).peek().litValue.toDouble
+        val re = c.io.output(i).re.peek().litValue.toDouble
+        val im = c.io.output(i).im.peek().litValue.toDouble
         (i, (re * re) + (im * im))
       }
 
@@ -101,7 +102,7 @@ class FFTHardwareTest extends AnyFlatSpec with ChiselScalatestTester {
 
   it should "produce a flat frequency spectrum for an impulse input" in {
     val N = 32
-    test(new FFT(N)) { c =>
+    test(new FFTComb(N)) { c =>
       // Drive a strong impulse at index 0 (e.g., 127) and 0 everywhere else
       c.io.input(0).poke(127.S)
       for (i <- 1 until N) {
@@ -109,13 +110,13 @@ class FFTHardwareTest extends AnyFlatSpec with ChiselScalatestTester {
       }
 
       // Read back the real part of bin 0 as a baseline reference
-      val baseRe = c.io.outputRe(0).peek().litValue.toDouble
+      val baseRe = c.io.output(0).re.peek().litValue.toDouble
 
       // Verify that the frequency response is flat (all real parts equal) 
       // and that the imaginary parts are all zero.
       for (i <- 0 until N) {
-        val re = c.io.outputRe(i).peek().litValue.toDouble
-        val im = c.io.outputIm(i).peek().litValue.toDouble
+        val re = c.io.output(i).re.peek().litValue.toDouble
+        val im = c.io.output(i).im.peek().litValue.toDouble
 
         // Real parts should remain uniform across all bins for an impulse
         assert(math.abs(re - baseRe) <= 2.0, s"Impulse spectrum not flat at bin $i: real=$re (expected ~ $baseRe)")
@@ -129,7 +130,7 @@ class FFTHardwareTest extends AnyFlatSpec with ChiselScalatestTester {
   it should "handle boundary conditions and extreme saturation values safely" in {
     val N = 32
 
-    test(new FFT(N)) { c =>
+    test(new FFTComb(N)) { c =>
       // --- Scenario A: Maximum Positive DC ---
       for (i <- 0 until N) {
         c.io.input(i).poke(127.S)
@@ -137,8 +138,8 @@ class FFTHardwareTest extends AnyFlatSpec with ChiselScalatestTester {
 
       // Verify outputs are stable and within valid bit width bounds (13 bits max)
       for (i <- 0 until N) {
-        val re = c.io.outputRe(i).peek().litValue
-        val im = c.io.outputIm(i).peek().litValue
+        val re = c.io.output(i).re.peek().litValue
+        val im = c.io.output(i).im.peek().litValue
         
         // Ensure values can be successfully evaluated without simulation faults
         assert(re.abs < 8192, s"Output real exceeds 13-bit bound at bin $i: $re")
@@ -153,8 +154,8 @@ class FFTHardwareTest extends AnyFlatSpec with ChiselScalatestTester {
 
       // Verify stability under extreme alternating inputs
       for (i <- 0 until N) {
-        val re = c.io.outputRe(i).peek().litValue
-        val im = c.io.outputIm(i).peek().litValue
+        val re = c.io.output(i).re.peek().litValue
+        val im = c.io.output(i).im.peek().litValue
         
         // Check that the alternating pattern correctly concentrates energy at the Nyquist bin (N/2)
         if (i == N / 2) {
