@@ -4,7 +4,7 @@ import chisel3._
 import chiseltest._
 import org.scalatest.flatspec.AnyFlatSpec
 import scala.util.Random
-import engine.FFTRadix2
+import engine.FFTRadix2 // Import the software reference model for FFT, which is the Radiz2 version since we cannot use floating points
 
 class FFTHardwareTest extends AnyFlatSpec with ChiselScalatestTester {
 
