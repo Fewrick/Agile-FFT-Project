@@ -75,6 +75,11 @@
     - Marilouise is suggesting either Saturday or Sunday
     - Sebastian prefers Saturday
 
+### Robert's Update (Added in after the meeting)
+- More hardware tests completed that should have desired coverage
+- Next step is to synthesize and carry out physical tests
+- Also available to assist in another part, will discuss with others online prior to next week
+
 ## What now?
 - Marilouise continues on the filter
 - Mads works on seq. FFT
