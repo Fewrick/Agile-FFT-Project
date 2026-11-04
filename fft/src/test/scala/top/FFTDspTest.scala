@@ -15,7 +15,7 @@ class FFTDspTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
     val samples = 32
     val inputWidth = 8
     val inputData = (0 until samples).map(i => i - 16)
-
+    
     val (expectedRe, expectedIm) = FFTRadix2.fft(inputData)
 
     test(new FFTDsp(inputWidth, samples)) { dut =>
