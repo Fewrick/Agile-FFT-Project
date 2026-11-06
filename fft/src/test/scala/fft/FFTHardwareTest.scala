@@ -170,4 +170,43 @@ class FFTHardwareTest extends AnyFlatSpec with ChiselScalatestTester {
       }
     }
   }
+
+  it should "compute the inverse FFT of a DC input" in {
+    val N = 32
+
+    test(new IFFTComb(N)) { c =>
+      for (i <- 0 until N) {
+        c.io.inputRe(i).poke((if (i == 0) N * 127 else 0).S)
+        c.io.inputIm(i).poke(0.S)
+      }
+
+      for (i <- 0 until N) {
+        assert(c.io.outputRe(i).peek().litValue == 127L, s"Sample $i real mismatch")
+        assert(c.io.outputIm(i).peek().litValue == 0L, s"Sample $i imaginary mismatch")
+      }
+    }
+  }
+
+  it should "match the software inverse FFT for random frequency bins" in {
+    val N = 32
+    val rand = new Random(42)
+    val inputRe = Seq.fill(N)(rand.nextInt(128) - 64)
+    val inputIm = Seq.fill(N)(rand.nextInt(128) - 64)
+    val (expectedRe, expectedIm) = FFTRadix2.ifftComplex(inputRe, inputIm)
+
+    test(new IFFTComb(N)) { c =>
+      for (i <- 0 until N) {
+        c.io.inputRe(i).poke(inputRe(i).S)
+        c.io.inputIm(i).poke(inputIm(i).S)
+      }
+
+      for (i <- 0 until N) {
+        val actualRe = c.io.outputRe(i).peek().litValue.toInt
+        val actualIm = c.io.outputIm(i).peek().litValue.toInt
+
+        assert(math.abs(actualRe - expectedRe(i)) <= 2, s"Sample $i real mismatch")
+        assert(math.abs(actualIm - expectedIm(i)) <= 2, s"Sample $i imaginary mismatch")
+      }
+    }
+  }
 }
