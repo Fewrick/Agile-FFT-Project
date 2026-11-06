@@ -80,6 +80,10 @@
 - Next step is to synthesize and carry out physical tests
 - Also available to assist in another part, will discuss with others online prior to next week
 
+### Fred's Update
+* IFFTComb implemented in Chisel (currently on its own branch)
+* Two simple hardware tests for the IFFTComb. 
+
 ## What now?
 - Marilouise continues on the filter
 - Mads works on seq. FFT
