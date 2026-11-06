@@ -1,13 +1,11 @@
 
-package comparison
+package cosimulation
 
 import chisel3._
 import chiseltest._
 import chiseltest.simulator.VerilatorBackendAnnotation
+import fft.{DFT, FFTComb}
 import org.scalatest.flatspec.AnyFlatSpec
-
-import engine.{FFTFP, FFTRadix2}
-import fft.{FFTComb, DFT}
 
 import java.nio.file.{Files, Path, Paths}
 import scala.io.Source
@@ -17,10 +15,7 @@ class FFTOutputTest extends AnyFlatSpec with ChiselScalatestTester {
   behavior of "FFT output generation"
 
   private val outputDir = Paths.get("co-simulation")
-
-  private val inputPath = Paths.get(
-    sys.env.getOrElse("FFT_INPUT", outputDir.resolve("sine.hex").toString)
-  )
+  private val inputPath = Paths.get(sys.env.getOrElse("FFT_INPUT", outputDir.resolve("sine.hex").toString))
 
   private val simulator = sys.env.get("FFT_SIMULATOR") match {
     case Some("verilator") => Seq(VerilatorBackendAnnotation)
@@ -46,9 +41,7 @@ class FFTOutputTest extends AnyFlatSpec with ChiselScalatestTester {
     val digits = (bits + 3) / 4
     val mask = (1L << bits) - 1
 
-    val lines = values.map { value =>
-      ("%0" + digits + "X").format(value.toLong & mask)
-    }
+    val lines = values.map { value => ("%0" + digits + "X").format(value.toLong & mask) }
 
     Files.write(path, (lines.mkString("\n") + "\n").getBytes("UTF-8"))
   }
@@ -65,15 +58,13 @@ class FFTOutputTest extends AnyFlatSpec with ChiselScalatestTester {
     require(input.length == 32, "Expected 32 input samples")
 
     // Scala floating-point FFT
-    val fftFP = new FFTFP()
-    val (fpRe, fpIm) = fftFP.fft(input.map(_.toDouble))
+    val (fpRe, fpIm) = FFTFP.fft(input.map(_.toDouble))
 
     writeFloat(outputDir.resolve("scala_fp_real.txt"), fpRe)
     writeFloat(outputDir.resolve("scala_fp_imag.txt"), fpIm)
 
     // Scala integer Radix-2 FFT
-    val fftRadix2 = new FFTRadix2()
-    val (radixRe, radixIm) = fftRadix2.fft(input)
+    val (radixRe, radixIm) = FFTRadix2.fft(input)
 
     writeHex(outputDir.resolve("scala_radix2_real.hex"), radixRe, 32)
     writeHex(outputDir.resolve("scala_radix2_imag.hex"), radixIm, 32)
@@ -84,9 +75,9 @@ class FFTOutputTest extends AnyFlatSpec with ChiselScalatestTester {
         dut.io.input(i).poke(input(i).S)
       }
 
-      val real = (0 until 32).map { i => dut.io.outputRe(i).peek().litValue.toInt }
+      val real = (0 until 32).map { i => dut.io.output(i).re.peek().litValue.toInt }
 
-      val imag = (0 until 32).map { i => dut.io.outputIm(i).peek().litValue.toInt }
+      val imag = (0 until 32).map { i => dut.io.output(i).im.peek().litValue.toInt }
 
       writeHex(outputDir.resolve("chisel_fft_real.hex"), real, dut.outputWidth)
       writeHex(outputDir.resolve("chisel_fft_imag.hex"), imag, dut.outputWidth)
@@ -98,8 +89,8 @@ class FFTOutputTest extends AnyFlatSpec with ChiselScalatestTester {
         dut.io.input(i).poke(input(i).S)
       }
 
-      val real = (0 until 32).map { i => dut.io.outputRe(i).peek().litValue.toInt }
-      val imag = (0 until 32).map { i => dut.io.outputIm(i).peek().litValue.toInt }
+      val real = (0 until 32).map { i => dut.io.output(i).re.peek().litValue.toInt }
+      val imag = (0 until 32).map { i => dut.io.output(i).im.peek().litValue.toInt }
 
       writeHex(outputDir.resolve("chisel_dft_real.hex"), real, dut.outputWidth)
       writeHex(outputDir.resolve("chisel_dft_imag.hex"), imag, dut.outputWidth)

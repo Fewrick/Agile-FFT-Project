@@ -13,7 +13,7 @@ sine:
 		--amplitude $(AMPLITUDE)
 
 fft-output: sine
-	sbt "testOnly comparison.FFTOutputTest"
+	sbt "testOnly cosimulation.FFTOutputTest"
 
 graph:
 	MPLCONFIGDIR=/tmp/fft-matplotlib MPLBACKEND=Agg \

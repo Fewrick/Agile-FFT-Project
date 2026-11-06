@@ -1,3 +1,5 @@
+package fft
+
 import chisel3._
 import chiseltest._
 import org.scalatest.flatspec.AnyFlatSpec
@@ -30,8 +32,8 @@ class DFTexample extends AnyFlatSpec with ChiselScalatestTester {
     println(sampleString)
     var freqString = "freqs:   "
     for (i <- 0 until 32) {
-      freqString += s"${dut.io.outputRe(i).peek().litValue.toInt}/"
-      freqString += s"${dut.io.outputIm(i).peek().litValue.toInt} "
+      freqString += s"${dut.io.output(i).re.peek().litValue.toInt}/"
+      freqString += s"${dut.io.output(i).im.peek().litValue.toInt} "
     }
     println(freqString)
   }
