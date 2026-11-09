@@ -75,8 +75,23 @@
     - Marilouise is suggesting either Saturday or Sunday
     - Sebastian prefers Saturday
 
+### Robert's Update (Added in after the meeting)
+- More hardware tests completed that should have desired coverage
+- Next step is to synthesize and carry out physical tests
+- Also available to assist in another part, will discuss with others online prior to next week
+
+### Fred's Update
+* IFFTComb implemented in Chisel (currently on its own branch)
+* Two simple hardware tests for the IFFTComb. 
+
 ## What now?
 - Marilouise continues on the filter
 - Mads works on seq. FFT
 - Sebastian tests UART and would like to make a script to test it automatically(?)
 - Fred and Robert needs to figure out what they're doing
+
+## Deadlines
+- We are setting a deadline for ALL implementation on **12:00 (lunchtime) Tuesday the 17th of November**
+- Presentation done **12:00 Tuesday the 1st of December**
+- Readme and final repo done **17:00 Tuesday the 1st of December**
+    - Martin is grading our projects in the evening after our presentation

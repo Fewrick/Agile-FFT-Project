@@ -1,13 +1,11 @@
 
-package comparison
+package cosimulation
 
 import chisel3._
 import chiseltest._
 import chiseltest.simulator.VerilatorBackendAnnotation
+import fft.{DFT, FFTComb}
 import org.scalatest.flatspec.AnyFlatSpec
-
-import engine.{FFTFP, FFTRadix2}
-import fft.{FFTComb, DFT}
 
 import java.nio.file.{Files, Path, Paths}
 import scala.io.Source
@@ -60,15 +58,13 @@ class FFTOutputTest extends AnyFlatSpec with ChiselScalatestTester {
     require(input.length == 32, "Expected 32 input samples")
 
     // Scala floating-point FFT
-    val fftFP = new FFTFP()
-    val (fpRe, fpIm) = fftFP.fft(input.map(_.toDouble))
+    val (fpRe, fpIm) = FFTFP.fft(input.map(_.toDouble))
 
     writeFloat(outputDir.resolve("scala_fp_real.txt"), fpRe)
     writeFloat(outputDir.resolve("scala_fp_imag.txt"), fpIm)
 
     // Scala integer Radix-2 FFT
-    val fftRadix2 = new FFTRadix2()
-    val (radixRe, radixIm) = fftRadix2.fft(input)
+    val (radixRe, radixIm) = FFTRadix2.fft(input)
 
     writeHex(outputDir.resolve("scala_radix2_real.hex"), radixRe, 32)
     writeHex(outputDir.resolve("scala_radix2_imag.hex"), radixIm, 32)
