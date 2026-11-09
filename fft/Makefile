@@ -20,6 +20,13 @@ graph:
 	python co-simulation/compare_fft.py \
 		--save co-simulation/fft_comparison.png
 
+UartTop.v:
+	sbt "runMain top.UartTop"
+
+.PHONY: fpga
+fpga: UartTop.v
+	cd vivado && make
+
 clean:
 	rm -rf test_run_dir
 	rm -f co-simulation/*.hex
@@ -27,3 +34,6 @@ clean:
 	rm -f co-simulation/fft_comparison.png
 	rm -f co-simulation/comparison_metrics.json
 	rm -rf co-simulation/__pycache__/
+	rm UartTop.v
+	rm UartTop.fir
+	cd vivado && make clean

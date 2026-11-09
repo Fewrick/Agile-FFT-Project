@@ -58,16 +58,18 @@ proc cfg::hdl_language {} {
     set language [string tolower [cfg::require HDL]]
 
     switch -- $language {
+        v  { return v }
         sv  { return sv }
         vhd { return vhd }
         default {
-            error "Configuration variable HDL must be 'sv' or 'vhd', got '$language'"
+            error "Configuration variable HDL must be 'v', 'sv' or 'vhd', got '$language'"
         }
     }
 }
 
 proc cfg::hdl_extensions {} {
     switch -- [cfg::hdl_language] {
+        v  { return {.v} }
         sv  { return {.sv} }
         vhd { return {.vhd .vhdl} }
     }

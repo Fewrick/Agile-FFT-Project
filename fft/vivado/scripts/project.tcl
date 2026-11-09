@@ -24,8 +24,7 @@ proc project::create {} {
     set hdl          [cfg::hdl_language]
     set hdl_exts     [cfg::hdl_extensions]
 
-    set rtl_subdir   [expr {$hdl eq "vhd" ? "vhdl" : "sv"}]
-    set rtl_dir      [file normalize [file join [cfg::require RTL_DIR] $rtl_subdir]]
+    set rtl_dir      [file normalize [cfg::require RTL_DIR]]
 
     set tb_dir       [file normalize [cfg::require TB_DIR]]
     set xdc_dir      [file normalize [cfg::require XDC_DIR]]
@@ -89,14 +88,14 @@ proc project::create {} {
 
     foreach fileset {sources_1 sim_1} {
 
-        # SystemVerilog
-        set sv_files [get_files \
+        # Verilog
+        set v_files [get_files \
             -quiet \
             -of_objects [get_filesets $fileset] \
-            -filter {NAME =~ "*.sv"}]
+            -filter {NAME =~ "*.v"}]
 
-        if {[llength $sv_files] > 0} {
-            set_property FILE_TYPE SystemVerilog $sv_files
+        if {[llength $v_files] > 0} {
+            set_property FILE_TYPE Verilog $v_files
         }
 
         # VHDL 2008, if requested

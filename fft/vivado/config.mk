@@ -4,7 +4,7 @@
 
 PROJECT      = fft
 
-TOP          = UartTop.v
+TOP          = UartTop
 
 PART         = xc7a100tcsg324-1
 
@@ -13,7 +13,7 @@ PART         = xc7a100tcsg324-1
 # Directories
 # ============================================================
 
-RTL_DIR      = rtl
+RTL_DIR      = ../
 TB_DIR       = tb
 XDC_DIR      = constraints
 
@@ -27,7 +27,7 @@ PROJECT_DIR  = $(BUILD_DIR)/project
 
 # HDL source language: sv or vhd
 # Override from the command line, for example: make build HDL=vhd
-HDL          = sv
+HDL          = v
 VHDL_STD     = 2008
 JOBS         = 6
 

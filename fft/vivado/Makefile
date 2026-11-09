@@ -4,7 +4,7 @@ include config.mk
 # Tools
 # ============================================================
 
-VIVADO          := ./.Docker/vivado-docker
+VIVADO          := vivado
 OPENFPGALOADER  ?= openFPGALoader
 VIVADO_WIN      ?= C:/Xilinx/2026.1/Vivado/bin/vivado.bat
 

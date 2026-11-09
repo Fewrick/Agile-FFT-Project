@@ -9,10 +9,6 @@ proc synth_report::run {} {
     set hdl_exts   [cfg::hdl_extensions]
     set vhdl_std   [cfg::require VHDL_STD]
 
-    # RTL is stored in rtl/vhdl or rtl/sv
-    set rtl_subdir [expr {$hdl eq "vhd" ? "vhdl" : "sv"}]
-    set rtl_dir    [file join $rtl_dir $rtl_subdir]
-
     set report_dir [file join $build_dir reports]
 
     puts "============================================================"
