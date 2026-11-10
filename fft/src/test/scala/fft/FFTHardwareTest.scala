@@ -208,5 +208,6 @@ class FFTHardwareTest extends AnyFlatSpec with ChiselScalatestTester {
         assert(math.abs(actualIm - expectedIm(i)) <= 2, s"Sample $i imaginary mismatch")
       }
     }
+
   }
 }
