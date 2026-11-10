@@ -41,29 +41,48 @@ jobs:
       - name: Run Scala and Chisel tests
         run: |
           set -o pipefail
-          echo "MAKEFLAGS=$MAKEFLAGS"
           sbt test 2>&1 | tee scala-test.log
 
       - name: Diagnose Verilator compilation
         if: failure()
         run: |
-          echo "=== Memory ==="
+          set -o pipefail
+
+          echo "=== System memory ==="
           free -h
 
           echo "=== Compiler ==="
           g++ --version
 
-          echo "=== Generated Verilator directories ==="
-          find fft/test_run_dir -type d -name verilated \
-            -print 2>/dev/null || true
-
           echo "=== Possible OOM events ==="
           sudo dmesg 2>/dev/null | \
-            grep -iE "out of memory|killed process" || true
+            grep -iE 'out of memory|killed process' || true
+
+          BUILD_DIR="fft/test_run_dir/FFTDsp_should_correctly_perform_FFT_filtering_and_IFFT/verilated"
+
+          if [ ! -d "$BUILD_DIR" ]; then
+            BUILD_DIR="test_run_dir/FFTDsp_should_correctly_perform_FFT_filtering_and_IFFT/verilated"
+          fi
+
+          if [ -f "$BUILD_DIR/VFFTDsp.mk" ]; then
+            echo "=== Rebuilding failed simulator ==="
+
+            make -C "$BUILD_DIR" \
+              -f VFFTDsp.mk \
+              -j1 \
+              V=1 \
+              2>&1 | tee verilator-build.log
+          else
+            echo "Generated Verilator Makefile not found"
+            find . -name VFFTDsp.mk -print
+          fi
 
       - name: Upload test logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: scala-test-logs
-          path: scala-test.log
+          path: |
+            scala-test.log
+            verilator-build.log
+          if-no-files-found: warn

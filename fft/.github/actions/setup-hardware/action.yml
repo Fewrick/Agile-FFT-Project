@@ -40,9 +40,6 @@ runs:
       run: |
         echo "$RUNNER_TOOL_CACHE/nn2hl-verilator-5.044/bin" >> "$GITHUB_PATH"
 
-        # Limit concurrent native compiler processes
-        echo "MAKEFLAGS=-j1" >> "$GITHUB_ENV"
-
     - name: Check native toolchain
       shell: bash
       run: |
