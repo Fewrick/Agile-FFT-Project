@@ -5,13 +5,16 @@ import chisel3.util._
 
 import fft._
 import interfaces.ComplexSample
+import filter.BandpassFilter
 
 class FFTDsp(override val inputDataWidth: Int, override val samples: Int) extends DspTop(inputDataWidth, samples, new ComplexSample(inputDataWidth + log2Ceil(samples))) {
     val fft = Module(new FFTSeq(inputDataWidth, samples))
+    //val filter = Module(new BandpassFilter(inputDataWidth + log2Ceil(samples), samples))
 
     // Memories
     val memIn = SyncReadMem(samples, SInt(inputDataWidth.W))
     val memFFT = SyncReadMem(samples, new ComplexSample(outputDataWidth))
+    //val memFilter = SyncReadMem(samples, new ComplexSample(outputDataWidth))
 
     // FSM
     object State extends ChiselEnum {
