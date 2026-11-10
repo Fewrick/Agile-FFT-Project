@@ -16,22 +16,37 @@ runs:
       shell: bash
       run: |
         sudo apt-get update
-        sudo apt-get install -y build-essential help2man perl make autoconf clang flex bison libfl-dev
+        sudo apt-get install -y \
+          build-essential help2man perl make autoconf \
+          clang flex bison libfl-dev
+
+    - name: Configure Clang
+      shell: bash
+      run: |
+        echo "CC=clang" >> "$GITHUB_ENV"
+        echo "CXX=clang++" >> "$GITHUB_ENV"
 
     - uses: actions/cache@v4
       id: verilator
       with:
         path: ${{ runner.tool_cache }}/nn2hl-verilator-5.044
-        key: ubuntu-24.04-${{ runner.arch }}-verilator-5.044-clang-${{ hashFiles('.github/actions/setup-hardware/action.yml') }}
+        key: ubuntu-24.04-${{ runner.arch }}-verilator-5.044-clang-${{ hashFiles('fft/.github/actions/setup-hardware/action.yml') }}
 
     - name: Build Verilator
       if: steps.verilator.outputs.cache-hit != 'true'
       shell: bash
       run: |
-        git clone --depth 1 --branch v5.044 https://github.com/verilator/verilator.git "$RUNNER_TEMP/verilator"
+        git clone --depth 1 --branch v5.044 \
+          https://github.com/verilator/verilator.git \
+          "$RUNNER_TEMP/verilator"
+
         cd "$RUNNER_TEMP/verilator"
+
         autoconf
-        ./configure --prefix="$RUNNER_TOOL_CACHE/nn2hl-verilator-5.044"
+
+        ./configure \
+          --prefix="$RUNNER_TOOL_CACHE/nn2hl-verilator-5.044"
+
         make -j2
         make install
 
@@ -43,8 +58,11 @@ runs:
     - name: Check native toolchain
       shell: bash
       run: |
+        echo "CC=$CC"
+        echo "CXX=$CXX"
+
         verilator --version
-        g++ --version
+        clang --version
         clang++ --version
         java -version
         free -h
