@@ -4,7 +4,7 @@ import chisel3._
 import chiseltest._
 import interfaces._
 import org.scalatest.flatspec.AnyFlatSpec
-import cosimulation.FFTRadix2
+import cosimulation.{FFTRadix2, ComplexValue}
 
 class FFTIFFTSeq(val width: Int, val samples: Int) extends Module {
   val io = IO(new Bundle {
@@ -27,17 +27,16 @@ class IFFTSeqTest extends AnyFlatSpec with ChiselScalatestTester {
     val samples = 32
     val outputWidth = 8
     val rand = new scala.util.Random(42)
-    val inputRe = Seq.fill(samples)(rand.nextInt(128) - 64)
-    val inputIm = Seq.fill(samples)(rand.nextInt(128) - 64)
-    val (expectedRe, expectedIm) = FFTRadix2.ifftComplex(inputRe, inputIm)
+    val input = Seq.fill(samples)(ComplexValue(rand.nextInt(128) - 64, rand.nextInt(128) - 64))
+    val expected = FFTRadix2.ifftComplex(input)
 
     test(new IFFTSeq(outputWidth, samples)) { dut =>
       dut.io.out.ready.poke(true.B)
 
       for (i <- 0 until samples) {
         dut.io.in.valid.poke(true.B)
-        dut.io.in.data.re.poke(inputRe(i).S)
-        dut.io.in.data.im.poke(inputIm(i).S)
+        dut.io.in.data.re.poke(input(i).re.S)
+        dut.io.in.data.im.poke(input(i).im.S)
         while (!dut.io.in.ready.peek().litToBoolean) {
           dut.clock.step()
         }
@@ -49,8 +48,8 @@ class IFFTSeqTest extends AnyFlatSpec with ChiselScalatestTester {
         while (!dut.io.out.valid.peek().litToBoolean) {
           dut.clock.step()
         }
-        assert(math.abs(dut.io.out.data.re.peek().litValue.toInt - expectedRe(i)) <= 2)
-        assert(math.abs(dut.io.out.data.im.peek().litValue.toInt - expectedIm(i)) <= 2)
+        assert(math.abs(dut.io.out.data.re.peek().litValue.toInt - expected(i).re) <= 2)
+        assert(math.abs(dut.io.out.data.im.peek().litValue.toInt - expected(i).im) <= 2)
         dut.clock.step()
       }
     }
