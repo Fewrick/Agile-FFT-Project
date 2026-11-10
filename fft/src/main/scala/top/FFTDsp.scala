@@ -1,17 +1,26 @@
+
 package top
 
 import chisel3._
 import chisel3.util._
 
-import fft._
+import fft.{FFTSeq, IFFTSeq}
 import interfaces.ComplexSample
+import filter.BandpassFilter
 
-class FFTDsp(override val inputDataWidth: Int, override val samples: Int) extends DspTop(inputDataWidth, samples, new ComplexSample(inputDataWidth + log2Ceil(samples))) {
+class FFTDsp(override val inputDataWidth: Int, override val samples: Int) extends DspTop(inputDataWidth, samples, SInt(inputDataWidth.W)) {
+    require(samples >= 2 && isPow2(samples))
+
+    val fftWidth = inputDataWidth + log2Ceil(samples)
+
+    // Processing modules
     val fft = Module(new FFTSeq(inputDataWidth, samples))
+    val filter = Module(new BandpassFilter(fftWidth, samples))
+    val ifft = Module(new IFFTSeq(inputDataWidth, samples))
 
-    // Memories
+    // Input and output memories
     val memIn = SyncReadMem(samples, SInt(inputDataWidth.W))
-    val memFFT = SyncReadMem(samples, new ComplexSample(outputDataWidth))
+    val memOut = SyncReadMem(samples, SInt(inputDataWidth.W))
 
     // FSM
     object State extends ChiselEnum {
@@ -23,13 +32,13 @@ class FFTDsp(override val inputDataWidth: Int, override val samples: Int) extend
 
     // Counters
     val inputIndex = RegInit(0.U(inputAddrWidth.W))
+    val filterIndex = RegInit(0.U(log2Ceil(samples).W))
     val outputIndex = RegInit(0.U(outputAddrWidth.W))
 
     val outputComplete = RegInit(false.B)
-
     val lastIndex = (samples - 1).U
 
-    // Control outputs
+    // Control signals
     val busy = state =/= IDLE && state =/= DONE
     val done = state === DONE
 
@@ -45,36 +54,73 @@ class FFTDsp(override val inputDataWidth: Int, override val samples: Int) extend
     }
 
     // -------------------------
-    // Input memory read
+    // Input memory -> FFT
     // -------------------------
 
-    fft.io.in.data := memIn.read(inputIndex, state === READ)
+    fft.io.in.data := memIn.read(
+        inputIndex,
+        state === READ
+    )
+
     fft.io.in.valid := state === SEND
 
     // -------------------------
-    // FFT output
+    // FFT -> Filter
     // -------------------------
 
-    fft.io.out.ready := busy
+    filter.io.mask := io.mask
+    filter.io.freqIndex := filterIndex
+    filter.io.in := fft.io.out.data
 
+    // -------------------------
+    // Filter -> IFFT
+    // -------------------------
+
+    ifft.io.in.data := filter.io.out
+    ifft.io.in.valid := fft.io.out.valid && busy
+
+    // Backpressure from IFFT to FFT
+    fft.io.out.ready := ifft.io.in.ready && busy
+
+    // Advance filter index only when
+    // a frequency sample is transferred
     when(fft.io.out.fire) {
-        memFFT.write(outputIndex, fft.io.out.data)
+        when(filterIndex === lastIndex) {
+            filterIndex := 0.U
+        }.otherwise {
+            filterIndex := filterIndex + 1.U
+        }
+    }
+
+    // -------------------------
+    // IFFT -> Output memory
+    // -------------------------
+
+    ifft.io.out.ready := busy
+
+    when(ifft.io.out.fire) {
+        // Store only the real component
+        memOut.write(
+            outputIndex,
+            ifft.io.out.data.re
+        )
+
         when(outputIndex === lastIndex) {
             outputComplete := true.B
         }.otherwise {
             outputIndex := outputIndex + 1.U
         }
-    } // IMPORTANT: Close the when block here.
+    }
 
     // -------------------------
     // Output memory read
     // -------------------------
 
     val readEn = io.readEn && state === DONE
-    val readData = memFFT.read(io.readAddr, readEn)
+    val readData = memOut.read(io.readAddr, readEn)
     val readValid = RegNext(readEn, false.B)
 
-    io.readData := 0.U.asTypeOf(new ComplexSample(outputDataWidth))
+    io.readData := 0.S(inputDataWidth.W)
 
     when(readValid) {
         io.readData := readData
@@ -88,6 +134,7 @@ class FFTDsp(override val inputDataWidth: Int, override val samples: Int) extend
         is(IDLE) {
             when(io.start) {
                 inputIndex := 0.U
+                filterIndex := 0.U
                 outputIndex := 0.U
                 outputComplete := false.B
                 state := READ
@@ -95,6 +142,7 @@ class FFTDsp(override val inputDataWidth: Int, override val samples: Int) extend
         }
 
         is(READ) {
+            // Wait for synchronous RAM read
             state := SEND
         }
 
@@ -110,6 +158,7 @@ class FFTDsp(override val inputDataWidth: Int, override val samples: Int) extend
         }
 
         is(DRAIN) {
+            // Wait for all IFFT results
             when(outputComplete) {
                 state := DONE
             }
@@ -118,6 +167,7 @@ class FFTDsp(override val inputDataWidth: Int, override val samples: Int) extend
         is(DONE) {
             when(io.start) {
                 inputIndex := 0.U
+                filterIndex := 0.U
                 outputIndex := 0.U
                 outputComplete := false.B
                 state := READ

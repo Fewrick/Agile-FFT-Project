@@ -95,3 +95,27 @@
 - Presentation done **12:00 Tuesday the 1st of December**
 - Readme and final repo done **17:00 Tuesday the 1st of December**
     - Martin is grading our projects in the evening after our presentation
+
+# Meeting 5 (10/11/2026)
+## What have we done?
+- We have been bad at using GitHub projects (the kanban board)
+- We had plans of having a meeting Saturday, but it was never done
+    - We should have a meeting this weekend, we should also specify a time
+    - We do it Sunday at 12:00 (for a 15-30 minute meeting) presumably on discord
+- Marilouise has made the Bandpass filter module and a very simple test for it
+- Frederik has made the sequential iFFT
+- Mads has made the sequential FFT + combined FFT-filter-iFFT
+- Robert has worked on some fuzzing tests (which is not yet working?)
+- Sebastian has made UART tests
+
+## What now?
+- Seb: Write a python program to communicate with the UART test to see if it works
+- If we assume the UART works, we can synthesize the sequential FFT
+    - Replace the "EmptyDsp" with "FFTDsp"
+- Robert: Fuzzing test on the board (can only be done when the UART tests works on the board)
+- Mads: Fixing GitHub CI
+- Mari and Fred will start looking into the microphone/speaker (and whether it is even doable with our deadlines)
+
+## Notes
+- The board does not have an on-board speaker, only an on-board microphone and an "audio out" female jack
+- At some point Robert and Sebastian will have a small sit-down where they run all tests
