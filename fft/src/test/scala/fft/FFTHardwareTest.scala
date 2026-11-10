@@ -4,7 +4,7 @@ import chisel3._
 import chiseltest._
 import org.scalatest.flatspec.AnyFlatSpec
 import scala.util.Random
-import cosimulation.FFTRadix2
+import cosimulation.{FFTRadix2, ComplexValue}
 import fft.FFTComb
 
 class FFTHardwareTest extends AnyFlatSpec with ChiselScalatestTester {
@@ -49,7 +49,7 @@ class FFTHardwareTest extends AnyFlatSpec with ChiselScalatestTester {
       }
 
       // Compute expected outputs using software golden model
-      val (expRe, expIm) = FFTRadix2.fft(inputVec)
+      val expected = FFTRadix2.fft(inputVec)
 
       // Verify each output bin against the golden model (allowing small rounding delta)
       for (i <- 0 until N) {
@@ -57,8 +57,8 @@ class FFTHardwareTest extends AnyFlatSpec with ChiselScalatestTester {
         val hwIm = c.io.output(i).im.peek().litValue.toDouble
 
         // Allow a delta of +/- 2 due to fixed-point rounding accumulation
-        assert(math.abs(hwRe - expRe(i)) <= 2.0, f"Bin $i Real mismatch: HW=$hwRe, Expected=${expRe(i)}")
-        assert(math.abs(hwIm - expIm(i)) <= 2.0, f"Bin $i Imag mismatch: HW=$hwIm, Expected=${expIm(i)}")
+        assert(math.abs(hwRe - expected(i).re) <= 2.0, f"Bin $i Real mismatch: HW=$hwRe, Expected=${expected(i).re}")
+        assert(math.abs(hwIm - expected(i).im) <= 2.0, f"Bin $i Imag mismatch: HW=$hwIm, Expected=${expected(i).im}")
       }
     }
   }
@@ -190,22 +190,21 @@ class FFTHardwareTest extends AnyFlatSpec with ChiselScalatestTester {
   it should "match the software inverse FFT for random frequency bins" in {
     val N = 32
     val rand = new Random(42)
-    val inputRe = Seq.fill(N)(rand.nextInt(128) - 64)
-    val inputIm = Seq.fill(N)(rand.nextInt(128) - 64)
-    val (expectedRe, expectedIm) = FFTRadix2.ifftComplex(inputRe, inputIm)
+    val input = Seq.fill(N)(ComplexValue(rand.nextInt(128) - 64, rand.nextInt(128) - 64))
+    val expected = FFTRadix2.ifftComplex(input)
 
     test(new IFFTComb(N)) { c =>
       for (i <- 0 until N) {
-        c.io.inputRe(i).poke(inputRe(i).S)
-        c.io.inputIm(i).poke(inputIm(i).S)
+        c.io.inputRe(i).poke(input(i).re.S)
+        c.io.inputIm(i).poke(input(i).im.S)
       }
 
       for (i <- 0 until N) {
         val actualRe = c.io.outputRe(i).peek().litValue.toInt
         val actualIm = c.io.outputIm(i).peek().litValue.toInt
 
-        assert(math.abs(actualRe - expectedRe(i)) <= 2, s"Sample $i real mismatch")
-        assert(math.abs(actualIm - expectedIm(i)) <= 2, s"Sample $i imaginary mismatch")
+        assert(math.abs(actualRe - expected(i).re) <= 2, s"Sample $i real mismatch")
+        assert(math.abs(actualIm - expected(i).im) <= 2, s"Sample $i imaginary mismatch")
       }
     }
 
