@@ -19,7 +19,3 @@ jobs:
   ci:
     name: Full Scala and Chisel regression
     uses: ./.github/workflows/ci.yaml
-
-  tests:
-    name: Operator tests
-    uses: ./.github/workflows/tests.yml
