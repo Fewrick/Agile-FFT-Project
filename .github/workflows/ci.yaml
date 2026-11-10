@@ -38,30 +38,23 @@ jobs:
         run: |
           set -o pipefail
 
-          echo "=== System memory ==="
-          free -h
-
-          echo "=== Compiler ==="
-          g++ --version
-
-          echo "=== Possible OOM events ==="
-          sudo dmesg 2>/dev/null | \
-            grep -iE 'out of memory|killed process' || true
-
           BUILD_DIR="test_run_dir/FFTDsp_should_correctly_perform_FFT_filtering_and_IFFT/verilated"
 
-          if [ -f "$BUILD_DIR/VFFTDsp.mk" ]; then
-            echo "=== Rebuilding failed simulator ==="
+          echo "=== Generated PCH files ==="
+          ls -lh "$BUILD_DIR"/VFFTDsp__pch* || true
 
-            make -C "$BUILD_DIR" \
-              -f VFFTDsp.mk \
-              -j1 \
-              V=1 \
-              2>&1 | tee verilator-build.log
-          else
-            echo "Generated Verilator Makefile not found"
-            find . -name VFFTDsp.mk -print
-          fi
+          echo "=== Compiler configuration ==="
+          grep -E '^(CXX|CXXFLAGS|CPPFLAGS|CFG_CXXFLAGS_PCH_I|CFG_GCH_IF_CLANG)' \
+            "$BUILD_DIR/VFFTDsp.mk" || true
+
+          echo "=== Clean native rebuild ==="
+          make -C "$BUILD_DIR" -f VFFTDsp.mk clean
+
+          make -C "$BUILD_DIR" \
+            -f VFFTDsp.mk \
+            -j1 \
+            V=1 \
+            2>&1 | tee verilator-build.log
 
       - name: Upload test logs
         if: always()
