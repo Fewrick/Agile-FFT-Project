@@ -1,0 +1,29 @@
+
+name: Operator tests
+
+on:
+  workflow_call:
+
+jobs:
+  test:
+    name: Run operator tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+
+    defaults:
+      run:
+        shell: bash
+        working-directory: fft
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup hardware
+        uses: ./fft/.github/actions/setup-hardware
+
+      - name: Generate sine
+        run: make sine
+        
+      - name: Run tests
+        run: sbt run

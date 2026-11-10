@@ -1,39 +1,29 @@
 
-name: Regression tests
+name: Scala and Chisel regression
 
 on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
-  workflow_dispatch:
-
-permissions:
-  contents: read
-
-concurrency:
-  group: regression-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
-
-defaults:
-  run:
-    shell: bash
+  workflow_call:
 
 jobs:
   regression:
-    name: Build image and run Scala tests
+    name: Full regression
     runs-on: ubuntu-24.04
     timeout-minutes: 30
+
+    defaults:
+      run:
+        shell: bash
+        working-directory: fft
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
 
       - name: Setup Python
-        uses: ./.github/actions/setup-python
+        uses: ./fft/.github/actions/setup-python
 
       - name: Setup hardware
-        uses: ./.github/actions/setup-hardware
+        uses: ./fft/.github/actions/setup-hardware
 
       - name: Generate sine
         run: make sine
@@ -58,11 +48,7 @@ jobs:
           sudo dmesg 2>/dev/null | \
             grep -iE 'out of memory|killed process' || true
 
-          BUILD_DIR="fft/test_run_dir/FFTDsp_should_correctly_perform_FFT_filtering_and_IFFT/verilated"
-
-          if [ ! -d "$BUILD_DIR" ]; then
-            BUILD_DIR="test_run_dir/FFTDsp_should_correctly_perform_FFT_filtering_and_IFFT/verilated"
-          fi
+          BUILD_DIR="test_run_dir/FFTDsp_should_correctly_perform_FFT_filtering_and_IFFT/verilated"
 
           if [ -f "$BUILD_DIR/VFFTDsp.mk" ]; then
             echo "=== Rebuilding failed simulator ==="
@@ -83,6 +69,6 @@ jobs:
         with:
           name: scala-test-logs
           path: |
-            scala-test.log
-            verilator-build.log
+            fft/scala-test.log
+            fft/verilator-build.log
           if-no-files-found: warn
