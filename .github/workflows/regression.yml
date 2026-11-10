@@ -35,8 +35,5 @@ jobs:
       - name: Setup hardware
         uses: ./fft/.github/actions/setup-hardware
 
-      - name: Build image
-        run: make image
-
-      - name: Run Scala tests
-        run: sbt test
+      - name: Workflows
+        uses: ./fft/.github/actions/workflows
