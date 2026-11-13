@@ -13,7 +13,7 @@ module PdmDes(
     input clk,
     input en,
     output done,
-    output [15:0] dout,
+    output reg [15:0] dout,
     output pdm_m_clk_o,
     input pdm_m_data_i
     );
@@ -24,7 +24,8 @@ reg en_int=0;
 reg done_int=0;
 reg clk_int=0;
 reg pdm_clk_rising;
-reg [15:0] pdm_tmp, dout;
+// reg [15:0] pdm_tmp, dout;
+reg [15:0] pdm_tmp;
 integer cnt_bits=0;
 integer cnt_clk=0;
 
