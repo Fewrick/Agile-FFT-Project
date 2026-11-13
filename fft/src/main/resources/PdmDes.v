@@ -13,7 +13,7 @@ module PdmDes(
     input clk,
     input en,
     output done,
-    output [7:0] dout,
+    output [15:0] dout,
     output pdm_m_clk_o,
     input pdm_m_data_i
     );
