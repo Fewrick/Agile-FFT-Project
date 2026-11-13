@@ -14,7 +14,8 @@ class PCM(
     require(decimation > 0)
     require(outputWidth == 8)
 
-    // Bits accumulated per PCM sample: pdmWordWidth * decimation.
+    // Calculating the total number of bits in the PDM stream and the width of the counters
+    // bits accumulated per PCM sample: 16x10 = 160 bits
     val totalBits = pdmWordWidth * decimation
     val countWidth = log2Ceil(totalBits + 1)
     val wordCountWidth = math.max(1, log2Ceil(decimation))
@@ -43,8 +44,12 @@ class PCM(
     pcmValid := false.B
 
     when(io.pdmValid) {
-        when(wordCount === (decimation - 1).U) {
-            // Center 50% density at zero and scale to signed 8-bit range.
+        when(wordCount == (decimation - 1).U) {
+            // calculate the PCM sample, subtracting half the totalt number of bits to center the value around zero
+            // 50% ones in the PDM stream will in the PCM sample be 0
+            // higher number of ones -> positive value
+            // fewer number of ones -> negative value
+            // scaling the value then makes it fit into the output width of 8 bits
             val centered = nextOneCount.asSInt - (totalBits / 2).S
             val scaled = (centered * 127.S) / (totalBits / 2).S
 
