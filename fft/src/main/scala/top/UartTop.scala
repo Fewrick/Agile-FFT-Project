@@ -26,6 +26,7 @@ class UartTop(val freq : Int, val baud : Int, val samples : Int = 32, val width 
   dspTop.io.start := false.B
   dspTop.io.readAddr := DontCare
   dspTop.io.readEn := DontCare
+  dspTop.io.mask := Fill(16, 1.U)
 
   object State extends ChiselEnum {
     val write, run, read = Value

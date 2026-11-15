@@ -58,16 +58,16 @@ class FFTOutputTest extends AnyFlatSpec with ChiselScalatestTester {
     require(input.length == 32, "Expected 32 input samples")
 
     // Scala floating-point FFT
-    val (fpRe, fpIm) = FFTFP.fft(input.map(_.toDouble))
+    val (fp) = FFTFP.fft(input.map(_.toDouble))
 
-    writeFloat(outputDir.resolve("scala_fp_real.txt"), fpRe)
-    writeFloat(outputDir.resolve("scala_fp_imag.txt"), fpIm)
+    writeFloat(outputDir.resolve("scala_fp_real.txt"), fp.map(_.re))
+    writeFloat(outputDir.resolve("scala_fp_imag.txt"), fp.map(_.im))
 
     // Scala integer Radix-2 FFT
-    val (radixRe, radixIm) = FFTRadix2.fft(input)
+    val radix = FFTRadix2.fft(input)
 
-    writeHex(outputDir.resolve("scala_radix2_real.hex"), radixRe, 32)
-    writeHex(outputDir.resolve("scala_radix2_imag.hex"), radixIm, 32)
+    writeHex(outputDir.resolve("scala_radix2_real.hex"), radix.map(_.re), 32)
+    writeHex(outputDir.resolve("scala_radix2_imag.hex"), radix.map(_.im), 32)
 
     // Chisel FFT
     test(new FFTComb()).withAnnotations(simulator) { dut =>
@@ -76,7 +76,6 @@ class FFTOutputTest extends AnyFlatSpec with ChiselScalatestTester {
       }
 
       val real = (0 until 32).map { i => dut.io.output(i).re.peek().litValue.toInt }
-
       val imag = (0 until 32).map { i => dut.io.output(i).im.peek().litValue.toInt }
 
       writeHex(outputDir.resolve("chisel_fft_real.hex"), real, dut.outputWidth)

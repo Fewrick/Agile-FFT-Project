@@ -3,40 +3,35 @@ package cosimulation
 import scala.math._
 
 object FFTFP {
-  def fft(x: Seq[Double]) : (Seq[Double], Seq[Double]) = {
+  def fft(x: Seq[Double]) : (Seq[ComplexFP]) = {
     require(x.nonEmpty, "DFT input must not be empty")
 
 
     val N = x.length
-    val XRe = new Array[Double](N)
-    val XIm = new Array[Double](N)
+    val X = new Array[ComplexFP](N)
 
     for (k <- 0 until N) {
-      var sumRe = 0.0
-      var sumIm = 0.0
+      var sum = ComplexFP(0.0, 0.0)
       for (n <- 0 until N) {
         val angle = (2.0*Pi*k*n)/N
-        sumRe += x(n) * cos(angle)
-        sumIm -= x(n) * sin(angle)
+        sum = sum + ComplexFP(x(n) * cos(angle), -x(n) * sin(angle))
       }
-      XRe(k) = sumRe
-      XIm(k) = sumIm
+      X(k) = sum
     }
-    (XRe, XIm)
+    X
   }
 
-  def ifft(XRe: Seq[Double], XIm: Seq[Double]) : Seq[Double] = {
-    require(XRe.nonEmpty, "IDFT input must not be empty")
-    require(XRe.length == XIm.length, "Number of real and imaginary elements should be equal")
+  def ifft(X: Seq[ComplexFP]) : Seq[Double] = {
+    require(X.nonEmpty, "IDFT input must not be empty")
 
-    val N = XRe.length
+    val N = X.length
     val x = new Array[Double](N)
 
     for (n <- 0 until N) {
       var sum = 0.0
       for (k <- 0 until N) {
         val angle = (2.0*Pi*k*n)/N
-        sum += XRe(k)*cos(angle) - XIm(k)*sin(angle)
+        sum += X(k).re*cos(angle) - X(k).im*sin(angle)
       }
       x(n) = sum/N
     }

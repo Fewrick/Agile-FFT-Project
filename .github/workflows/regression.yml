@@ -1,3 +1,4 @@
+
 name: Regression tests
 
 on:
@@ -14,29 +15,7 @@ concurrency:
   group: regression-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
-defaults:
-  run:
-    shell: bash
-    working-directory: fft
-
 jobs:
-  regression:
-    name: Scala and Chisel tests
-    runs-on: ubuntu-24.04
-    timeout-minutes: 30
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-
-      - name: Setup Python
-        uses: ./fft/.github/actions/setup-python
-
-      - name: Setup hardware
-        uses: ./fft/.github/actions/setup-hardware
-
-      - name: Build image
-        run: make image
-
-      - name: Run Scala tests
-        run: sbt test
+  ci:
+    name: Full Scala and Chisel regression
+    uses: ./.github/workflows/ci.yaml

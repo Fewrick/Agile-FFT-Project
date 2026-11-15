@@ -12,6 +12,9 @@ abstract class DspTop[T <: Data](val inputDataWidth : Int, val samples : Int, ou
   val outputAddrWidth = log2Ceil(samples)
 
   val io = IO(new Bundle {
+    // Input Mask
+    val mask = Input(UInt(16.W))
+
     // Input Memory
     val writeData = Input(SInt(inputDataWidth.W))
     val writeAddr = Input(UInt(inputAddrWidth.W))

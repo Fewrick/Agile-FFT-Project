@@ -1,28 +1,19 @@
-name: Regression tests
+
+name: Scala and Chisel regression
 
 on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
-  workflow_dispatch:
-
-permissions:
-  contents: read
-
-concurrency:
-  group: regression-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
-
-defaults:
-  run:
-    shell: bash
+  workflow_call:
 
 jobs:
   regression:
-    name: Build image and run Scala tests
+    name: Full regression
     runs-on: ubuntu-24.04
     timeout-minutes: 30
+
+    defaults:
+      run:
+        shell: bash
+        working-directory: fft
 
     steps:
       - name: Checkout repository
