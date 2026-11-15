@@ -44,7 +44,7 @@ class PCM(
     pcmValid := false.B
 
     when(io.pdmValid) {
-        when(wordCount == (decimation - 1).U) {
+        when(wordCount === (decimation - 1).U) {
             // calculate the PCM sample, subtracting half the totalt number of bits to center the value around zero
             // 50% ones in the PDM stream will in the PCM sample be 0
             // higher number of ones -> positive value
