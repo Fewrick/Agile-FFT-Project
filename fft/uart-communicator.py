@@ -9,7 +9,7 @@ import argparse
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-i", "--input", required=True, help="input file")
-group = parser.add_mutually_exclusive_group(required=True)
+group = parser.add_mutually_exclusive_group()
 group.add_argument("-o", "--output", help="output file")
 group.add_argument("-x", "--expected", help="expected output")
 # TODO: add port argument
@@ -78,3 +78,7 @@ if args.expected != None:
 if args.output != None:
   file = open(args.output, "w")
   file.write("".join(f"{int(value):02X}\n" for value in readbuffer))
+
+# if no output is given
+if args.expected == None and args.output == None:
+  print(f"received buffer: {"".join(f"{int(value):02X}, " for value in readbuffer)}")
