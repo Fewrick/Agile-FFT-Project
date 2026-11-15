@@ -126,6 +126,18 @@ flash-windows:
 			HW_DEVICE="$(HW_DEVICE)"
 
 
+flash-linux: 
+	$(VIVADO) \
+		-mode batch \
+		-nolog \
+		-nojournal \
+		-source $(PROGRAM_TCL) \
+		-tclargs \
+			BITSTREAM="$(BITSTREAM)" \
+			HW_SERVER="$(HW_SERVER)" \
+			HW_DEVICE="$(HW_DEVICE)"
+
+
 tcl: project
 	./.Docker/vivado-docker -mode tcl
 

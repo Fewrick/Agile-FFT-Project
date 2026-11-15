@@ -1,5 +1,5 @@
 set script_dir [file dirname [file normalize [info script]]]
-cd [file normalize [file join $script_dir ../..]]
+cd [file normalize [file join $script_dir ..]]
 set exit_code 0
 set status_file ""
 

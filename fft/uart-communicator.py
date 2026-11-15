@@ -12,7 +12,7 @@ parser.add_argument("-i", "--input", required=True, help="input file")
 group = parser.add_mutually_exclusive_group()
 group.add_argument("-o", "--output", help="output file")
 group.add_argument("-x", "--expected", help="expected output")
-# TODO: add port argument
+parser.add_argument("-p" "--serial-port", help="serial port")
 args = parser.parse_args()
 
 def parsehexfile(path):
@@ -29,16 +29,19 @@ if args.expected != None:
 
 # get port
 def getPort():
-  ports = list(filter(lambda x: "USB Serial Port" in x.description, serial.tools.list_ports.comports()))
+  ports = list(filter(lambda x: "USB" in x.description, serial.tools.list_ports.comports()))
   if (len(ports) == 0):
-    print("Unable to find Serial Port")
-    return
+    print("unable to find derial port")
+    sys.exit(1)
   if (len(ports) != 1):
-    print("Found multiple ports:\n" + '\n'.join(map(lambda x: x.description, ports)))
-    return
+    print("found multiple serial ports:\n" + '\n'.join(map(lambda x: x.device, ports)))
+    sys.exit(1)
+  print(f"found serial port: {ports[0].device}")
   return ports[0].device
 
-port = getPort()
+port = args.p__serial_port
+if port == None:
+  port = getPort()
 
 # open serial connection
 ser = serial.Serial(port, 115200, timeout=3)
@@ -81,4 +84,4 @@ if args.output != None:
 
 # if no output is given
 if args.expected == None and args.output == None:
-  print(f"received buffer: {"".join(f"{int(value):02X}, " for value in readbuffer)}")
+  print(f"received buffer: {", ".join(f"{int(value):02X}" for value in readbuffer)}")
