@@ -26,3 +26,6 @@
 # Vivado files
 !vivado/
 !vivado/**
+
+# uart-communicator
+!uart-communicator.py
