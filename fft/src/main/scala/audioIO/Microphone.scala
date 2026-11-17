@@ -4,7 +4,12 @@ import audioIO.{PCM, PdmDes}
 import chisel3._
 import chisel3.util._
 
-class Microphone(val outputWidth: Int = 8, val samples: Int = 32) extends Module {
+class Microphone(
+    val outputWidth: Int = 8,
+    val samples: Int = 32,
+    val systemClockFreqHz: Int = 100000000,
+    val pdmClockFreqHz: Int = 2000000
+) extends Module {
 // class MicTop(val outputDataWidth: Int = 8) extends Module {
     require(outputWidth > 0)
 
@@ -12,6 +17,9 @@ class Microphone(val outputWidth: Int = 8, val samples: Int = 32) extends Module
         // Input microphone signals
         val micEn         = Input(Bool()) // Should come from a button (i think)
         val micDataStream = Input(Bool())
+
+        // Output microphone signals
+        val micClock = Output(Bool()) // Outputs a clock to the microphone's physical clock pin
 
         // Output Memory
         val writeData = Output(SInt(outputWidth.W))
@@ -29,7 +37,7 @@ class Microphone(val outputWidth: Int = 8, val samples: Int = 32) extends Module
     val decimation = 10
 
     // Processing modules
-    val pdm = Module(new PdmDes())
+    val pdm = Module(new PdmDes(systemClockFreqHz, pdmClockFreqHz))
     val pcm = Module(new PCM(16, decimation, outputWidth))
 
     // Input signals
@@ -42,76 +50,8 @@ class Microphone(val outputWidth: Int = 8, val samples: Int = 32) extends Module
     pcm.io.pdmValid := pdm.io.done
     
     // Output signals
+    io.micClock := pdm.io.pdm_m_clk_o
+
     io.writeData := pcm.io.pcmSample
     io.writeEn := pcm.io.pcmValid
-
-// private val countWidth = log2Ceil(samples + 1)
-
-// val io = IO(new Bundle {
-//   val micEn         = Input(Bool())
-//   val micDataStream = Input(Bool())
-//   val pcmSamples    = Decoupled(SInt(outputWidth.W))
-// })
-
-// val pdm = Module(new PdmDes)
-// val pcm = Module(new PCM(16, decimation, outputWidth))
-// val fifo = Module(new Queue(SInt(outputWidth.W), entries = samples))
-
-// val previousMicEn = RegNext(io.micEn, false.B)
-// val startPressed = io.micEn && !previousMicEn
-
-// object State extends ChiselEnum {
-//   val Idle, Capture, Available = Value
-// }
-// import State._
-
-// val state = RegInit(Idle)
-// val captured = RegInit(0.U(countWidth.W))
-// val readCount = RegInit(0.U(countWidth.W))
-
-// pdm.io.clk          := clock
-// pdm.io.en           := (state === Capture)
-// pdm.io.pdm_m_data_i := io.micDataStream
-
-// pcm.io.pdmWord  := pdm.io.dout
-// pcm.io.pdmValid := pdm.io.done
-
-// fifo.io.enq.valid := (state === Capture) && pcm.io.pcmValid
-// fifo.io.enq.bits  := pcm.io.pcmSample
-
-// io.pcmSamples.bits  := fifo.io.deq.bits
-// io.pcmSamples.valid := (state === Available) && fifo.io.deq.valid
-// fifo.io.deq.ready   := (state === Available) && io.pcmSamples.ready
-
-// switch(state) {
-//   is(Idle) {
-//     when(startPressed) {
-//       captured := 0.U
-//       readCount := 0.U
-//       state := Capture
-//     }
-//   }
-
-//   is(Capture) {
-//     when(pcm.io.pcmValid) {
-//       when(captured === (samples - 1).U) {
-//         state := Available
-//       }.otherwise {
-//         captured := captured + 1.U
-//       }
-//     }
-//   }
-
-//   is(Available) {
-//     when(io.pcmSamples.fire) {
-//       when(readCount === (samples - 1).U) {
-//         readCount := 0.U
-//         state := Idle
-//       }.otherwise {
-//         readCount := readCount + 1.U
-//       }
-//     }
-//   }
-// }
-    
 }

@@ -9,7 +9,10 @@
 //////////////////////////////////////////////////////////////////////////////////
 
 
-module PdmDes(
+module PdmDes #(
+    parameter C_SYS_CLK_FREQ_HZ = 100000000,
+    parameter C_PDM_FREQ_HZ = 2000000
+)(
     input clk,
     input en,
     output done,
@@ -18,16 +21,17 @@ module PdmDes(
     input pdm_m_data_i
     );
 
-parameter C_PDM_FREQ_HZ=2000000;
-
 reg en_int=0;
 reg done_int=0;
 reg clk_int=0;
-reg pdm_clk_rising;
-// reg [15:0] pdm_tmp, dout;
-reg [15:0] pdm_tmp;
+reg pdm_clk_rising=0;
+reg [15:0] pdm_tmp=0;
 integer cnt_bits=0;
 integer cnt_clk=0;
+localparam integer CLK_HALF_PERIOD_CYCLES =
+    C_SYS_CLK_FREQ_HZ / (2 * C_PDM_FREQ_HZ);
+
+initial dout=0;
 
 assign done = done_int;
 assign pdm_m_clk_o = clk_int;
@@ -59,30 +63,21 @@ begin
      end           
 end
 
-// Generate the done signal
+// Assert done only after all 16 bits, including the current input bit, are present.
 always @(posedge clk)
 begin
-  if (pdm_clk_rising)
-  begin
-    if (cnt_bits==0)
-    begin
-        if (en_int)
-        begin
-            done_int<=1;
-            dout <= pdm_tmp;
-        end
-     end
+  done_int <= 0;
+  if (en_int && pdm_clk_rising && cnt_bits == 15) begin
+    done_int <= 1;
+    dout <= {pdm_tmp[14:0], pdm_m_data_i};
   end
-  else
-    done_int <= 0;
 end
 
 // Generate PDM Clock, that runs independent from the enable signal, therefore
 // the onboard microphone will always send data
 always @(posedge clk)
 begin
-//  clk_int <= 0;
-  if (cnt_clk == 24) // (C_SYS_CLK_FREQ_MHZ*1000000)/(C_PDM_FREQ_HZ*2))-1  where C_SYS_CLK_FREQ_MHZ=100, C_PDM_FREQ_HZ=2MHz
+  if (cnt_clk == CLK_HALF_PERIOD_CYCLES - 1)
   begin
     cnt_clk <= 0;
     clk_int <= ~clk_int;

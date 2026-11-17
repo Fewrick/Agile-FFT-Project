@@ -5,7 +5,10 @@ import chiseltest._
 import chiseltest.simulator.VerilatorBackendAnnotation
 import org.scalatest.flatspec.AnyFlatSpec
 
-class PdmDesWrapper extends Module {
+class PdmDesWrapper(
+    systemClockFreqHz: Int = 100000000,
+    pdmClockFreqHz: Int = 2000000
+) extends Module {
   val io = IO(new Bundle {
     val en          = Input(Bool())
     val pdm_m_data_i = Input(Bool())
@@ -14,7 +17,7 @@ class PdmDesWrapper extends Module {
     val pdm_m_clk_o = Output(Bool())
   })
 
-  val pdm = Module(new PdmDes)
+  val pdm = Module(new PdmDes(systemClockFreqHz, pdmClockFreqHz))
   pdm.io.clk          := clock
   pdm.io.en           := io.en
   pdm.io.pdm_m_data_i := io.pdm_m_data_i
@@ -85,16 +88,36 @@ class PDMBlackBoxTest extends AnyFlatSpec with ChiselScalatestTester {
       val pattern = 0xA35C
       val bits = (15 to 0 by -1).map(bit => ((pattern >> bit) & 1) != 0)
 
-      // The first done pulse captures an incomplete word in this RTL.
-      sampleOnNextPdmRise(bits.head, expectedDone = true)
-
-      // Send the other 15 bits, then clock once more to capture the full word.
-      bits.tail.foreach {bit =>
-        sampleOnNextPdmRise(bit, expectedDone = false)
+      bits.zipWithIndex.foreach { case (bit, index) =>
+        sampleOnNextPdmRise(bit, expectedDone = index == bits.length - 1)
       }
-      sampleOnNextPdmRise(false, expectedDone = true)
 
       dut.io.dout.expect(pattern.U(16.W))
     }
+  }
+
+  it should "derive the PDM clock divider from the configured system clock" in {
+    test(new PdmDesWrapper(systemClockFreqHz = 100000000, pdmClockFreqHz = 1000000))
+      .withAnnotations(Seq(VerilatorBackendAnnotation)) { dut =>
+        dut.io.en.poke(false.B)
+        dut.io.pdm_m_data_i.poke(false.B)
+
+        var level = dut.io.pdm_m_clk_o.peek().litToBoolean
+        var firstTransitionCycles = 0
+        while (dut.io.pdm_m_clk_o.peek().litToBoolean == level && firstTransitionCycles < 51) {
+          dut.clock.step()
+          firstTransitionCycles += 1
+        }
+        assert(firstTransitionCycles <= 50, "PDM clock did not transition within its configured half-period")
+
+        level = dut.io.pdm_m_clk_o.peek().litToBoolean
+        var cycles = 0
+        while (dut.io.pdm_m_clk_o.peek().litToBoolean == level && cycles < 51) {
+          dut.clock.step()
+          cycles += 1
+        }
+
+        assert(cycles == 50, s"expected 50 system-clock cycles per PDM half-period, got $cycles")
+      }
   }
 }
