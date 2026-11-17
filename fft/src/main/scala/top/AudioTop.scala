@@ -16,9 +16,10 @@ class AudioTop(val samples: Int = 32) extends Module {
     val start     = Input(Bool())
     val mask      = Input(UInt(16.W))
     val streamOut = Output(UInt(inputDataWidth.W))
+    val micClkOut = Output(Bool())
   })
 
-  val mic = Module(new Microphone(inputDataWidth, samples))
+  val mic = Module(new Microphone(inputDataWidth))
   val dsp = Module(new FFTDsp(inputDataWidth, samples))
 
   mic.io.micEn := true.B
@@ -47,6 +48,7 @@ class AudioTop(val samples: Int = 32) extends Module {
   dsp.io.readEn   := state === ReadOutput
   dsp.io.readAddr := addr
   io.streamOut   := dsp.io.readData.asUInt
+  io.micClkOut   := mic.io.micClock
 
   switch(state) {
     is(Idle) {

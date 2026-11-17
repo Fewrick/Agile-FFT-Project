@@ -10,14 +10,12 @@ class MicrophoneTest extends AnyFlatSpec with ChiselScalatestTester {
     private val dataWidth = 8
     private val pdmWordWidth = 16
     private val decimation = 10
-    private val systemClockFreqHz = 100000000
-    private val pdmClockFreqHz = 2000000
     private val expectedFirstWriteRisingEdge = pdmWordWidth * decimation
 
     private val testCycles = 10000
 
     "Microphone" should "stop writing when disabled while keeping micClock running" in {
-    test(new Microphone(dataWidth, 32, systemClockFreqHz, pdmClockFreqHz))
+    test(new Microphone(dataWidth))
         .withAnnotations(Seq(VerilatorBackendAnnotation)) { dut =>
         dut.clock.setTimeout(0)
 
@@ -33,12 +31,13 @@ class MicrophoneTest extends AnyFlatSpec with ChiselScalatestTester {
         assert(initialWrite, "no initial PCM sample was produced")
 
         dut.io.micEn.poke(false.B)
+        dut.clock.step()
         dut.io.writeEn.expect(false.B)
 
         var micClockLow = false
         var micClockHigh = false
-        for (cycle <- 0 until 200) {
-            dut.io.micDataStream.poke((cycle % 2 == 0).B)
+        for (i <- 0 until 200) {
+            dut.io.micDataStream.poke((i % 2 == 0).B)
             dut.clock.step()
             dut.io.writeEn.expect(false.B)
             if (dut.io.micClock.peek().litToBoolean) micClockHigh = true
@@ -50,7 +49,7 @@ class MicrophoneTest extends AnyFlatSpec with ChiselScalatestTester {
     }
 
     "Microphone" should "capture and process input when enable is high" in {
-    test(new Microphone(dataWidth, 32, systemClockFreqHz, pdmClockFreqHz))
+    test(new Microphone(dataWidth))
         .withAnnotations(Seq(VerilatorBackendAnnotation)) { dut =>
         dut.clock.setTimeout(0)
 
@@ -77,6 +76,7 @@ class MicrophoneTest extends AnyFlatSpec with ChiselScalatestTester {
                 }
             }
         }
+        println(f"First data output = $firstWriteData%d")
 
         assert(
           firstWriteRisingEdge == expectedFirstWriteRisingEdge,

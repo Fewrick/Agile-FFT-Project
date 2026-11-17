@@ -9,12 +9,8 @@
 //////////////////////////////////////////////////////////////////////////////////
 
 
-module PdmDes #(
-    parameter C_SYS_CLK_FREQ_HZ = 100000000,
-    parameter C_PDM_FREQ_HZ = 2000000
-)(
+module PdmDes(
     input clk,
-    input reset,
     input en,
     output done,
     output reg [15:0] dout,
@@ -29,8 +25,6 @@ reg pdm_clk_rising=0;
 reg [15:0] pdm_tmp=0;
 integer cnt_bits=0;
 integer cnt_clk=0;
-localparam integer CLK_HALF_PERIOD_CYCLES =
-    C_SYS_CLK_FREQ_HZ / (2 * C_PDM_FREQ_HZ);
 
 initial dout=0;
 
@@ -39,14 +33,11 @@ assign pdm_m_clk_o = clk_int;
 
 // register en input    
 always @(posedge clk)
-  if (reset)
-    en_int <= 0;
-  else
     en_int <= en;
 
 // Sample input serial data process
 always @(posedge clk) 
-  if (reset || en==0)
+  if (en==0)
     pdm_tmp <= 0;
   else
   if (pdm_clk_rising) 
@@ -55,7 +46,7 @@ always @(posedge clk)
 // Count the number of sampled bits
 always @(posedge clk)
 begin
-  if (reset || en_int==0)
+  if (en_int==0)
     cnt_bits <=0;
   else
     if (pdm_clk_rising)
@@ -70,38 +61,28 @@ end
 // Assert done only after all 16 bits, including the current input bit, are present.
 always @(posedge clk)
 begin
-  if (reset) begin
-    done_int <= 0;
-    dout <= 0;
-  end else begin
-    done_int <= 0;
-    if (en_int && pdm_clk_rising && cnt_bits == 15) begin
-      done_int <= 1;
-      dout <= {pdm_tmp[14:0], pdm_m_data_i};
-    end
+  done_int <= 0;
+  if (en_int && pdm_clk_rising && cnt_bits == 15) begin
+    done_int <= 1;
+    dout <= {pdm_tmp[14:0], pdm_m_data_i};
   end
 end
 
 // Generate PDM Clock, that runs independent from the enable signal, therefore
-// the onboard microphone will always send data
+// the onboard microphone will always send data. The 25-cycle half-period
+// assumes a 100 MHz system clock and produces a 2 MHz PDM clock.
 always @(posedge clk)
 begin
-  if (reset) begin
+  if (cnt_clk == 24) begin
     cnt_clk <= 0;
-    clk_int <= 0;
-    pdm_clk_rising <= 0;
-  end else begin
-    if (cnt_clk == CLK_HALF_PERIOD_CYCLES - 1) begin
-      cnt_clk <= 0;
-      clk_int <= ~clk_int;
-      if (clk_int == 0)
-        pdm_clk_rising <= 1;
-      else
-        pdm_clk_rising <= 0;
-    end else begin
-      cnt_clk <= cnt_clk + 1;
+    clk_int <= ~clk_int;
+    if (clk_int == 0)
+      pdm_clk_rising <= 1;
+    else
       pdm_clk_rising <= 0;
-    end
+  end else begin
+    cnt_clk <= cnt_clk + 1;
+    pdm_clk_rising <= 0;
   end
 end
     
