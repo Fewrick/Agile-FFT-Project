@@ -45,16 +45,16 @@ class MicrophoneTest extends AnyFlatSpec with ChiselScalatestTester {
             dut.clock.step()
             val dout = dut.io.writeData.peek().litValue
             val dvalid = dut.io.writeEn.peek().litToBoolean
-            if (((i>=8020) && (i<=8030)) || ((i>=16820) && (i<=16830))) {
-                println(f"Step=$i%d \t dout=$dout%d \t writeEn=$dvalid")
-            }
+            // if (((i>=8020) && (i<=8030)) || ((i>=16820) && (i<=16830))) {
+            //     println(f"Step=$i%d \t dout=$dout%d \t writeEn=$dvalid")
+            // }
             if (dvalid) {
                 writeDetected = true
                 
-                // println(f"writeEn went high at step=$i%d \t")
+                println(f"writeEn went high at step=$i%d \t")
                 if (dout != 0) {
                     nonZeroWriteDetected = true
-                    // println(f"... with value $dout%d")
+                    println(f"... with value $dout%d")
                     println("")
                     assert(dout==127, "output not 127 when input is all ones")
                 }
