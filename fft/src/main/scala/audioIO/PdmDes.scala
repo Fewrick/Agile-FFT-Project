@@ -1,4 +1,4 @@
-package audioio
+package audioIO
 
 import chisel3._
 import chisel3.util.HasBlackBoxResource

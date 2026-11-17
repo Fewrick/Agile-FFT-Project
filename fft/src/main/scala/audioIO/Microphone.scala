@@ -1,10 +1,10 @@
-package top
+package audioIO
 
+import audioIO.{PCM, PdmDes}
 import chisel3._
 import chisel3.util._
-import audioio.{PdmDes, PCM}
 
-class MicTop(val outputWidth: Int = 8, val samples: Int = 32) extends Module {
+class Microphone(val outputWidth: Int = 8, val samples: Int = 32) extends Module {
 // class MicTop(val outputDataWidth: Int = 8) extends Module {
     require(outputWidth > 0)
     require((samples >= 2) & ((samples & (samples - 1)) == 0))
