@@ -29,7 +29,7 @@ class FFTSeq(val inputWidth: Int, val samples: Int) extends Module {
     // -------------------------
 
     object State extends ChiselEnum {
-        val LOAD, COMPUTE, OUTPUT = Value
+        val LOAD, COMPUTE, DRAIN, OUTPUT = Value
     }
     import State._
 
@@ -80,79 +80,111 @@ class FFTSeq(val inputWidth: Int, val samples: Int) extends Module {
     // FFT computation
     // -------------------------
 
-    when(state === COMPUTE) {
-        for (s <- 0 until stages) {
+    // Insert a zero at bit `stage` to form A, then set that bit to form B.
+    val half = UIntToOH(stage, addrWidth)
+    val lowMask = half - 1.U
+    val index = butterflyIndex.pad(addrWidth)
+    val k = index & lowMask
+
+    val addrA = ((index & ~lowMask) << 1)(addrWidth - 1, 0) | k
+    val addrB = addrA | half
+
+    // Map the stage-local twiddle to the full-size FFT table.
+    val twiddleIndexWidth = log2Ceil((samples / 2) max 2)
+    val twiddleIndex = (k << (lastStage - stage))(twiddleIndexWidth - 1, 0)
+
+    val cosTable = VecInit((0 until samples / 2).map { j =>
+        val angle = 2 * math.Pi * j / samples
+        math.round(math.cos(angle) * SCALE).toInt.S(8.W)
+    })
+
+    val sinTable = VecInit((0 until samples / 2).map { j =>
+        val angle = 2 * math.Pi * j / samples
+        math.round(-math.sin(angle) * SCALE).toInt.S(8.W)
+    })
+
+    val cosFactor = if (samples == 2) cosTable(0) else cosTable(twiddleIndex)
+    val sinFactor = if (samples == 2) sinTable(0) else sinTable(twiddleIndex)
+
+    val issue = state === COMPUTE
+
+    val tag = Wire(new Bundle {
+        val addrA = UInt(addrWidth.W)
+        val addrB = UInt(addrWidth.W)
+        val last = Bool()
+    })
+    tag.addrA := addrA
+    tag.addrB := addrB
+    tag.last := butterflyIndex === lastButterfly
+
+    // E0: Capture the selected operands, twiddle, and destination addresses.
+    val valid0 = RegNext(issue, false.B)
+    val tag0 = RegEnable(tag, issue)
+    val a0 = RegEnable(buffer(addrA), issue)
+    val b0 = RegEnable(buffer(addrB), issue)
+    val cos0 = RegEnable(cosFactor, issue)
+    val sin0 = RegEnable(sinFactor, issue)
+
+    // E1: Capture the four signed products.
+    val valid1 = RegNext(valid0, false.B)
+    val tag1 = RegEnable(tag0, valid0)
+    val a1 = RegEnable(a0, valid0)
+    val reCos1 = RegEnable(b0.re * cos0, valid0)
+    val imSin1 = RegEnable(b0.im * sin0, valid0)
+    val imCos1 = RegEnable(b0.im * cos0, valid0)
+    val reSin1 = RegEnable(b0.re * sin0, valid0)
+
+    // E2: Combine the products without losing precision.
+    val valid2 = RegNext(valid1, false.B)
+    val tag2 = RegEnable(tag1, valid1)
+    val a2 = RegEnable(a1, valid1)
+    val productRe2 = RegEnable(reCos1 -& imSin1, valid1)
+    val productIm2 = RegEnable(imCos1 +& reSin1, valid1)
+
+    // E3: Preserve the original signed division and truncation toward zero.
+    val valid3 = RegNext(valid2, false.B)
+    val tag3 = RegEnable(tag2, valid2)
+    val a3 = RegEnable(a2, valid2)
+    val tr3 = RegEnable(productRe2 / SCALE.S(8.W), valid2)
+    val ti3 = RegEnable(productIm2 / SCALE.S(8.W), valid2)
+
+    def wrapForStage(value: SInt): SInt = {
+        val wrapped = Wire(SInt(outputWidth.W))
+        wrapped := value(outputWidth - 1, 0).asSInt
+
+        for (s <- 0 until (stages - 1)) {
             when(stage === s.U) {
-                val half = 1 << s
-                val fftSize = 2 * half
-
-                // Width of inputs at this stage
-                val stageWidth = inputWidth + s
-
-                // Butterfly indices
-                val group = butterflyIndex / half.U
-                val k = butterflyIndex % half.U
-
-                val addrA = group * fftSize.U + k
-                val addrB = addrA + half.U
-
-                // Stage-specific twiddle factors
-                val cosTable = VecInit(
-                    (0 until half).map { j =>
-                        val angle = 2 * math.Pi * j / fftSize
-                        math.round(math.cos(angle) * SCALE).toInt.S(8.W)
-                    }
-                )
-
-                val sinTable = VecInit(
-                    (0 until half).map { j =>
-                        val angle = 2 * math.Pi * j / fftSize
-                        math.round(-math.sin(angle) * SCALE).toInt.S(8.W)
-                    }
-                )
-
-                val cosFactor = cosTable(k)
-                val sinFactor = sinTable(k)
-
-                // Read complex operands.
-                // Restrict widths to match FFTComb's
-                // recursive intermediate widths.
-                val ar = buffer(addrA).re(stageWidth - 1, 0).asSInt
-                val ai = buffer(addrA).im(stageWidth - 1, 0).asSInt
-                val br = buffer(addrB).re(stageWidth - 1, 0).asSInt
-                val bi = buffer(addrB).im(stageWidth - 1, 0).asSInt
-
-                // Same arithmetic as FFTComb
-                val tr = ((cosFactor * br) -& (sinFactor * bi)) / SCALE.S(8.W)
-                val ti = ((cosFactor * bi) +& (sinFactor * br)) / SCALE.S(8.W)
-
-                // Butterfly results
-                val outAr = ar +& tr
-                val outAi = ai +& ti
-
-                val outBr = ar -& tr
-                val outBi = ai -& ti
-
-                val nextWidth = stageWidth + 1
-
-                buffer(addrA).re := outAr(nextWidth - 1, 0).asSInt
-                buffer(addrA).im := outAi(nextWidth - 1, 0).asSInt
-                buffer(addrB).re := outBr(nextWidth - 1, 0).asSInt
-                buffer(addrB).im := outBi(nextWidth - 1, 0).asSInt
+                wrapped := value(inputWidth + s, 0).asSInt
             }
         }
+        wrapped
+    }
 
-        // Advance butterfly/stage counters
-        when(butterflyIndex === lastButterfly) {
+    when(issue) {
+        when(tag.last) {
+            state := DRAIN
+        }.otherwise {
+            butterflyIndex := butterflyIndex + 1.U
+        }
+    }
+
+    // E4: Write both results. The final writeback releases the next stage.
+    when(valid3) {
+        buffer(tag3.addrA).re := wrapForStage(a3.re +& tr3)
+        buffer(tag3.addrA).im := wrapForStage(a3.im +& ti3)
+        buffer(tag3.addrB).re := wrapForStage(a3.re -& tr3)
+        buffer(tag3.addrB).im := wrapForStage(a3.im -& ti3)
+
+        when(tag3.last) {
             butterflyIndex := 0.U
+
             when(stage === lastStage) {
                 outputIndex := 0.U
                 state := OUTPUT
             }.otherwise {
                 stage := stage + 1.U
+                state := COMPUTE
             }
-        }.otherwise {
-            butterflyIndex := butterflyIndex + 1.U
         }
     }
 

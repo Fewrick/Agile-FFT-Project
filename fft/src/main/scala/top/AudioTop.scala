@@ -25,7 +25,7 @@ class AudioTop(val samples: Int = 32) extends Module {
   mic.io.micDataStream := io.streamIn
 
   object State extends ChiselEnum {
-    val Idle, Capture, Launch, WaitForDsp, ReadOutput = Value
+    val Idle, Capture, CommitLastWrite, Launch, WaitForDsp, ReadOutput = Value
   }
   import State._
 
@@ -38,15 +38,19 @@ class AudioTop(val samples: Int = 32) extends Module {
   val acceptStart = state === Idle && startRise
   val writeSample = state === Capture && mic.io.writeEn
 
-  dsp.io.writeData := mic.io.writeData
-  dsp.io.writeAddr := addr
-  dsp.io.writeEn   := writeSample
+  // Microphone -> DSP register boundary.
+  // Capture the sample, address, and write enable on the same edge.
+  dsp.io.writeData := RegEnable(mic.io.writeData, writeSample)
+  dsp.io.writeAddr := RegEnable(addr, writeSample)
+  dsp.io.writeEn   := RegNext(writeSample, false.B)
   dsp.io.start     := state === Launch
   dsp.io.mask      := RegEnable(io.mask, acceptStart)
 
   dsp.io.readEn   := state === ReadOutput
   dsp.io.readAddr := addr
-  io.streamOut   := dsp.io.readData.asUInt
+
+  // DSP -> output register boundary.
+  io.streamOut := RegNext(dsp.io.readData.asUInt, 0.U(inputDataWidth.W))
 
   switch(state) {
     is(Idle) {
@@ -59,11 +63,15 @@ class AudioTop(val samples: Int = 32) extends Module {
     is(Capture) {
       when(writeSample) {
         when(addr === lastAddr) {
-          state := Launch
+          state := CommitLastWrite
         }.otherwise {
           addr := addr + 1.U
         }
       }
+    }
+
+    is(CommitLastWrite) {
+      state := Launch
     }
 
     is(Launch) {
