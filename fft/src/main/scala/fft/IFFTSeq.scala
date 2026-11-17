@@ -139,14 +139,18 @@ class IFFTSeq(val outputWidth: Int, val samples: Int) extends Module {
   val valid3 = RegNext(valid2, false.B)
   val tag3 = RegEnable(tag2, valid2)
   val a3 = RegEnable(a2, valid2)
-  val divRe = Module(new Div127(productRe2.getWidth))
-  val divIm = Module(new Div127(productIm2.getWidth))
+  val divRe = Module(new Div127(productRe2.getWidth, true))
+  val divIm = Module(new Div127(productIm2.getWidth, true))
 
   divRe.io.in := productRe2
   divIm.io.in := productIm2
 
-  val tr3 = RegEnable(divRe.io.out, valid2)
-  val ti3 = RegEnable(divIm.io.out, valid2)
+  // E4: Register the corrected signed quotients and their writeback data.
+  val valid4 = RegNext(valid3, false.B)
+  val tag4 = RegEnable(tag3, valid3)
+  val a4 = RegEnable(a3, valid3)
+  val tr4 = RegEnable(divRe.io.out, valid3)
+  val ti4 = RegEnable(divIm.io.out, valid3)
 
   // A signed shift rounds negative odd values down. Add one in that case
   // to match the original signed /2, which truncates toward zero.
@@ -164,23 +168,23 @@ class IFFTSeq(val outputWidth: Int, val samples: Int) extends Module {
     }
   }
 
-  // E4: Normalize and write both outputs. Advance on the final writeback.
-  when(valid3) {
-    buffer(tag3.addrA).re := normalize(a3.re +& tr3)
-    buffer(tag3.addrA).im := normalize(a3.im +& ti3)
-    buffer(tag3.addrB).re := normalize(a3.re -& tr3)
-    buffer(tag3.addrB).im := normalize(a3.im -& ti3)
+  // E5: Write both results. The final writeback releases the next stage.
+  when(valid4) {
+      buffer(tag4.addrA).re := normalize(a4.re +& tr4)
+      buffer(tag4.addrA).im := normalize(a4.im +& ti4)
+      buffer(tag4.addrB).re := normalize(a4.re -& tr4)
+      buffer(tag4.addrB).im := normalize(a4.im -& ti4)
 
-    when(tag3.last) {
-      butterflyIndex := 0.U
-      when(stage === lastStage) {
-        outputIndex := 0.U
-        state := OUTPUT
-      }.otherwise {
-        stage := stage + 1.U
-        state := COMPUTE
+      when(tag4.last) {
+          butterflyIndex := 0.U
+          when(stage === lastStage) {
+              outputIndex := 0.U
+              state := OUTPUT
+          }.otherwise {
+              stage := stage + 1.U
+              state := COMPUTE
+          }
       }
-    }
   }
 
   // Time-domain outout streaming

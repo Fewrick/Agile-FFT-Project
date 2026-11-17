@@ -3,7 +3,7 @@ package arithmetic
 import chisel3._
 import chisel3.util._
 
-class Div127(val width: Int = 16) extends Module {
+class Div127(val width: Int = 16, val pipelined: Boolean = false) extends Module {
   require(width >= 1 && width <= 27)
 
   val io = IO(new Bundle {
@@ -28,10 +28,21 @@ class Div127(val width: Int = 16) extends Module {
   val residue = lowDigits +& highDigits
 
   // For the supported widths, residue is less than 4 * 127.
-  val correction = PopCount(Seq(residue >= 127.U, residue >= 254.U, residue >= 381.U))
+  val (coarse, remainder, negate) =
+    if (pipelined) {
+      (RegNext(coarseQuotient), RegNext(residue), RegNext(negative))
+    } else {
+      (coarseQuotient, residue, negative)
+    }
+
+  val correction = PopCount(Seq(
+    remainder >= 127.U,
+    remainder >= 254.U,
+    remainder >= 381.U
+  ))
 
   val quotient = Wire(UInt(width.W))
-  quotient := coarseQuotient +& correction
+  quotient := coarse +& correction
 
-  io.out := Mux(negative, 0.U(width.W) - quotient, quotient).asSInt
+  io.out := Mux(negate, 0.U(width.W) - quotient, quotient).asSInt
 }
