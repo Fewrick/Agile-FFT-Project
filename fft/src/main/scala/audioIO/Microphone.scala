@@ -42,16 +42,17 @@ class Microphone(
 
     // Input signals
     pdm.io.clk := clock 
+    pdm.io.reset := reset.asBool
     pdm.io.en := io.micEn 
     pdm.io.pdm_m_data_i := io.micDataStream
 
     // Signals connecting modules
     pcm.io.pdmWord := pdm.io.dout
-    pcm.io.pdmValid := pdm.io.done
+    pcm.io.pdmValid := Mux(io.micEn, pdm.io.done, false.B)
     
     // Output signals
     io.micClock := pdm.io.pdm_m_clk_o
 
     io.writeData := pcm.io.pcmSample
-    io.writeEn := pcm.io.pcmValid
+    io.writeEn := Mux(io.micEn, pcm.io.pcmValid, false.B)
 }

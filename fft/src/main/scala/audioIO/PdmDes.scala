@@ -21,6 +21,7 @@ class PdmDes(
 
   val io = IO(new Bundle {
     val clk          = Input(Clock())
+    val reset        = Input(Bool())
     val en           = Input(Bool())
     val done         = Output(Bool())
     val dout         = Output(UInt(16.W))

@@ -19,6 +19,7 @@ class PdmDesWrapper(
 
   val pdm = Module(new PdmDes(systemClockFreqHz, pdmClockFreqHz))
   pdm.io.clk          := clock
+  pdm.io.reset        := reset.asBool
   pdm.io.en           := io.en
   pdm.io.pdm_m_data_i := io.pdm_m_data_i
   io.done             := pdm.io.done

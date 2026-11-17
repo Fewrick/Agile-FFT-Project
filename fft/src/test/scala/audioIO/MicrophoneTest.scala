@@ -8,53 +8,81 @@ import org.scalatest.flatspec.AnyFlatSpec
 
 class MicrophoneTest extends AnyFlatSpec with ChiselScalatestTester {
     private val dataWidth = 8
+    private val pdmWordWidth = 16
     private val decimation = 10
+    private val systemClockFreqHz = 100000000
+    private val pdmClockFreqHz = 2000000
+    private val expectedFirstWriteRisingEdge = pdmWordWidth * decimation
 
     private val testCycles = 10000
 
-    "Microphone" should "not capture any input when enable is low" in {
-    test(new Microphone(8, 32))
-        .withAnnotations(Seq(VerilatorBackendAnnotation)) { dut =>
-        dut.clock.setTimeout(0)
-
-        dut.io.micEn.poke(false.B)
-
-        var sawWrite = false
-        for (cycle <- 0 until testCycles) {
-            // Keep the input active to check that micEn gates it.
-            dut.io.micDataStream.poke((cycle % 2 == 0).B)
-            dut.clock.step()
-            sawWrite = sawWrite || dut.io.writeEn.peek().litToBoolean
-        }
-
-        assert(!sawWrite, "writeEn became true while micEn was low")
-        }
-    }
-
-    "Microphone" should "capture and process input when enable is high" in {
-    test(new Microphone(8, 32))
+    "Microphone" should "stop writing when disabled while keeping micClock running" in {
+    test(new Microphone(dataWidth, 32, systemClockFreqHz, pdmClockFreqHz))
         .withAnnotations(Seq(VerilatorBackendAnnotation)) { dut =>
         dut.clock.setTimeout(0)
 
         dut.io.micEn.poke(true.B)
         dut.io.micDataStream.poke(true.B)
-
-        var sawWrite = false
-        var sawNonZeroWrite = false
-        for (i <- 0 until testCycles) {
+        var initialWrite = false
+        var cycles = 0
+        while (cycles < testCycles && !initialWrite) {
             dut.clock.step()
+            initialWrite = dut.io.writeEn.peek().litToBoolean
+            cycles += 1
+        }
+        assert(initialWrite, "no initial PCM sample was produced")
+
+        dut.io.micEn.poke(false.B)
+        dut.io.writeEn.expect(false.B)
+
+        var micClockLow = false
+        var micClockHigh = false
+        for (cycle <- 0 until 200) {
+            dut.io.micDataStream.poke((cycle % 2 == 0).B)
+            dut.clock.step()
+            dut.io.writeEn.expect(false.B)
+            if (dut.io.micClock.peek().litToBoolean) micClockHigh = true
+            else micClockLow = true
+        }
+
+        assert(micClockHigh && micClockLow, "micClock did not toggle while capture was disabled")
+        }
+    }
+
+    "Microphone" should "capture and process input when enable is high" in {
+    test(new Microphone(dataWidth, 32, systemClockFreqHz, pdmClockFreqHz))
+        .withAnnotations(Seq(VerilatorBackendAnnotation)) { dut =>
+        dut.clock.setTimeout(0)
+
+        dut.io.micEn.poke(false.B)
+        dut.io.micDataStream.poke(false.B)
+        dut.clock.step(2)
+        dut.io.micEn.poke(true.B)
+        dut.io.micDataStream.poke(true.B)
+
+        var previousMicClock = dut.io.micClock.peek().litToBoolean
+        var micClockRisingEdges = 0
+        var firstWriteRisingEdge = -1
+        var firstWriteData = 0
+        for (_ <- 0 until testCycles) {
+            dut.clock.step()
+            val micClock = dut.io.micClock.peek().litToBoolean
+            if (!previousMicClock && micClock) micClockRisingEdges += 1
+            previousMicClock = micClock
+
             if (dut.io.writeEn.peek().litToBoolean) {
-                sawWrite = true
-                
-                println(f"Step = $i%d \t")
-                if (dut.io.writeData.peek().litValue != 0) {
-                    sawNonZeroWrite = true
+                if (firstWriteRisingEdge < 0) {
+                    firstWriteRisingEdge = micClockRisingEdges
+                    firstWriteData = dut.io.writeData.peek().litValue.toInt
                 }
             }
         }
 
-        assert(sawWrite, "no valid PCM sample was produced")
-        assert(sawNonZeroWrite, "no nonzero PCM sample was produced")
+        assert(
+          firstWriteRisingEdge == expectedFirstWriteRisingEdge,
+          s"expected the first PCM sample after $expectedFirstWriteRisingEdge microphone-clock edges, got $firstWriteRisingEdge"
+        )
+        assert(firstWriteData == 127, s"expected all-one PDM input to produce 127, got $firstWriteData")
         }
     }
 
