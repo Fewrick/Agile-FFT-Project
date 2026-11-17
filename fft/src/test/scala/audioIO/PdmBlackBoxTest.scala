@@ -24,32 +24,6 @@ class PdmDesWrapper extends Module {
 }
 
 class PDMBlackBoxTest extends AnyFlatSpec with ChiselScalatestTester {
-  // "PDM blackbox" should "print its outputs" in {
-  //   test(new PdmDesWrapper)
-  //   .withAnnotations(Seq(VerilatorBackendAnnotation)) { dut =>
-  //     dut.io.en.poke(false.B)
-  //     dut.io.pdm_m_data_i.poke(false.B)
-  //     dut.clock.step(2)
-
-  //     dut.io.en.poke(true.B)
-
-  //     for (cycle <- 0 until 1000) {
-  //       // A simple repeating input pattern; this test is for observing outputs,
-  //       // not checking decoded audio values.
-  //       dut.io.pdm_m_data_i.poke(((cycle / 50) % 2 == 0).B)
-  //       dut.clock.step()
-
-  //       val done = dut.io.done.peek().litToBoolean
-  //       if (cycle % 25 == 0 || done) {
-  //         val dout = dut.io.dout.peek().litValue
-  //         println(
-  //           f"cycle=$cycle%4d pdm_clk=${dut.io.pdm_m_clk_o.peek().litToBoolean} " +
-  //           f"data=${dut.io.pdm_m_data_i.peek().litToBoolean} done=$done dout=0x$dout%04X"
-  //         )
-  //       }
-  //     }
-  //   }
-  // }
 
   "PDM blackbox" should "deserialize 16 serial bits into dout" in {
     test(new PdmDesWrapper)
@@ -57,6 +31,7 @@ class PDMBlackBoxTest extends AnyFlatSpec with ChiselScalatestTester {
       dut.io.en.poke(false.B)
       dut.io.pdm_m_data_i.poke(false.B)
       dut.clock.step(2)
+      dut.io.done.expect(false.B)
       dut.io.en.poke(true.B)
 
       def sampleOnNextPdmRise(bit: Boolean, expectedDone: Boolean): Unit = {
@@ -85,14 +60,9 @@ class PDMBlackBoxTest extends AnyFlatSpec with ChiselScalatestTester {
       val pattern = 0xA35C
       val bits = (15 to 0 by -1).map(bit => ((pattern >> bit) & 1) != 0)
 
-      // The first done pulse captures an incomplete word in this RTL.
-      sampleOnNextPdmRise(bits.head, expectedDone = true)
-
-      // Send the other 15 bits, then clock once more to capture the full word.
-      bits.tail.foreach {bit =>
-        sampleOnNextPdmRise(bit, expectedDone = false)
+      bits.zipWithIndex.foreach { case (bit, index) =>
+        sampleOnNextPdmRise(bit, expectedDone = index == bits.length - 1)
       }
-      sampleOnNextPdmRise(false, expectedDone = true)
 
       dut.io.dout.expect(pattern.U(16.W))
     }
