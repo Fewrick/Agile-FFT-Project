@@ -119,3 +119,34 @@
 ## Notes
 - The board does not have an on-board speaker, only an on-board microphone and an "audio out" female jack
 - At some point Robert and Sebastian will have a small sit-down where they run all tests
+
+# Meeting 6 (15/11/2026)
+
+## What has been done
+- Marylou and Fred started a PCM module and a MicTop (the "legoblock" before the DSP topmodule), we need to discuss some parameters and look more into the MicTop
+- The audio out (speaker part) has not been looked into yet
+- Python UART is being worked on today
+
+- Marylou and Fred reevaluates the "MicTop"
+- Mads can look into the "audioio top"
+- Robert can look into the speaker
+	- The GitHub with the PDM Verilog probably also has a audio-out module. Look into that. The link is in the PdmDes verilog file.
+	- 8 bit input, 1 bit output
+- Seb keeps working on the python UART
+
+# Meeting 7 (17/11/2026)
+
+## What has been done
+- Mads has done things (wrote a message as he is sick)
+- Seb finished the python program to interface with the UART top on the FPGA (works) + synthesized the DSP which has massive timing violations and massive area usage (needs to be fixed!)
+	- We needs to split up the DSP module, so that there is a topmodule for only the FFT (so that it can be synthesized by itself), and all three FFT-filter-iFFT
+- Marylou has started writing some tests for the microphone, but needs to make sure that they actually test for the things we want to test + that the module actually behaves how we want
+
+## What needs to be done
+- Python files for recording audio for the UART version + play the resulting audio (Seb)
+- The thing on the FPGA board still doesn't work. Needs to be fixed. PRIORITY #1.
+	- Mads (and maybe Seb) should have a look at the current implementation
+- Still look into the speaker (if draft is not done on Friday, inform group so we can act accordingly)
+- Hex files for testvectors for tests on board (workflow; have a Scala (or python) file generate them)
+- Start writing the README and create figures (needs to be done-done the 29th at midnight)
+- Finish the simple microphone test (Marylou; should be done today hopefully)
