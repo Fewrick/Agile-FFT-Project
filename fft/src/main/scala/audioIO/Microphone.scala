@@ -7,8 +7,6 @@ import chisel3.util._
 class Microphone(val outputWidth: Int = 8, val samples: Int = 32) extends Module {
 // class MicTop(val outputDataWidth: Int = 8) extends Module {
     require(outputWidth > 0)
-    require((samples >= 2) & ((samples & (samples - 1)) == 0))
-    val addrWidth = log2Ceil(samples)
 
     val io = IO(new Bundle {
         // Input microphone signals
@@ -17,7 +15,6 @@ class Microphone(val outputWidth: Int = 8, val samples: Int = 32) extends Module
 
         // Output Memory
         val writeData = Output(SInt(outputWidth.W))
-        //val writeAddr = Output(UInt(addrWidth.W))
         val writeEn   = Output(Bool())
         })
     
