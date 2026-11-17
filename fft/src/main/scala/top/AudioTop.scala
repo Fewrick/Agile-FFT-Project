@@ -16,6 +16,7 @@ class AudioTop(val samples: Int = 32) extends Module {
     val start     = Input(Bool())
     val mask      = Input(UInt(16.W))
     val streamOut = Output(UInt(inputDataWidth.W))
+    val micClkOut = Output(Bool())
   })
 
   val mic = Module(new Microphone(inputDataWidth, samples))
@@ -23,6 +24,7 @@ class AudioTop(val samples: Int = 32) extends Module {
 
   mic.io.micEn := true.B
   mic.io.micDataStream := io.streamIn
+  io.micClkOut := mic.io.micClock
 
   object State extends ChiselEnum {
     val Idle, Capture, Launch, WaitForDsp, ReadOutput = Value
