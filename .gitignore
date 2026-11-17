@@ -3,3 +3,5 @@
 lab4/target/global-logging
 **/.idea/
 *.DS_Store
+fft/vivado/clockInfo.txt
+fft/vivado/tight_setup_hold_pins.txt
