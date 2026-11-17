@@ -17,7 +17,7 @@ class Microphone(val outputWidth: Int = 8, val samples: Int = 32) extends Module
 
         // Output Memory
         val writeData = Output(SInt(outputWidth.W))
-        val writeAddr = Output(UInt(addrWidth.W))
+        //val writeAddr = Output(UInt(addrWidth.W))
         val writeEn   = Output(Bool())
         })
     
