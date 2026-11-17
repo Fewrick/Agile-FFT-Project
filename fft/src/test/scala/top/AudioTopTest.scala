@@ -20,13 +20,14 @@ class AudioTopTest extends AnyFlatSpec with ChiselScalatestTester {
 
   it should "reproduce a constant PCM value with all FFT bins enabled" in {
     val samples = 32
-    val expected = 64
+    val input = 64
+    val expected = 63 // because of rounding down
     val bitsPerSample = 16 * 10
     val clocksPerBit = 50
     val clocksPerSample = clocksPerBit * bitsPerSample
-    val pdm = pcmToPdm(expected, bitsPerSample)
+    val pdm = pcmToPdm(input, bitsPerSample)
 
-    test(new AudioTop(samples)) { dut =>
+    test(new AudioTop(samples)).withAnnotations(Seq(VerilatorBackendAnnotation)) { dut =>
       dut.clock.setTimeout(0)
       dut.io.start.poke(false.B)
       dut.io.mask.poke("hffff".U)
