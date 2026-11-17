@@ -3,6 +3,7 @@ package fft
 import chisel3._
 import chisel3.util._
 import interfaces._
+import arithmetic._
 
 class FFTSeq(val inputWidth: Int, val samples: Int) extends Module {
     require(inputWidth > 0)
@@ -145,8 +146,15 @@ class FFTSeq(val inputWidth: Int, val samples: Int) extends Module {
     val valid3 = RegNext(valid2, false.B)
     val tag3 = RegEnable(tag2, valid2)
     val a3 = RegEnable(a2, valid2)
-    val tr3 = RegEnable(productRe2 / SCALE.S(8.W), valid2)
-    val ti3 = RegEnable(productIm2 / SCALE.S(8.W), valid2)
+
+    val divRe = Module(new Div127(productRe2.getWidth))
+    val divIm = Module(new Div127(productIm2.getWidth))
+
+    divRe.io.in := productRe2
+    divIm.io.in := productIm2
+
+    val tr3 = RegEnable(divRe.io.out, valid2)
+    val ti3 = RegEnable(divIm.io.out, valid2)
 
     def wrapForStage(value: SInt): SInt = {
         val wrapped = Wire(SInt(outputWidth.W))
