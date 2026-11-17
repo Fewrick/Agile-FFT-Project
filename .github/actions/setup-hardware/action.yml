@@ -29,31 +29,30 @@ runs:
     - uses: actions/cache@v4
       id: verilator
       with:
-        path: ${{ runner.tool_cache }}/nn2hl-verilator-5.044
-        key: ubuntu-24.04-${{ runner.arch }}-verilator-5.044-clang-${{ hashFiles('fft/.github/actions/setup-hardware/action.yml') }}
+        path: ${{ runner.tool_cache }}/verilator-5.044-clang
+        key: ubuntu-24.04-${{ runner.arch }}-verilator-5.044-clang-${{ hashFiles('.github/actions/setup-hardware/action.yml') }}
 
     - name: Build Verilator
       if: steps.verilator.outputs.cache-hit != 'true'
       shell: bash
+      env:
+        CC: clang
+        CXX: clang++
       run: |
         git clone --depth 1 --branch v5.044 \
           https://github.com/verilator/verilator.git \
           "$RUNNER_TEMP/verilator"
 
         cd "$RUNNER_TEMP/verilator"
-
         autoconf
-
-        ./configure \
-          --prefix="$RUNNER_TOOL_CACHE/nn2hl-verilator-5.044"
-
+        ./configure --prefix="$RUNNER_TOOL_CACHE/verilator-5.044-clang"
         make -j2
         make install
 
     - name: Configure native simulation
       shell: bash
       run: |
-        echo "$RUNNER_TOOL_CACHE/nn2hl-verilator-5.044/bin" >> "$GITHUB_PATH"
+        echo "$RUNNER_TOOL_CACHE/verilator-5.044-clang/bin" >> "$GITHUB_PATH"
 
     - name: Check native toolchain
       shell: bash
