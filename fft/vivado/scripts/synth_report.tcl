@@ -20,7 +20,7 @@ proc synth_report::run {} {
     puts "Report dir:$report_dir"
 
     # --------------------------------------------------------
-    # Find RTL
+    # Load RTL
     # --------------------------------------------------------
 
     set rtl_files [util::find_files $rtl_dir $hdl_exts]
@@ -29,29 +29,14 @@ proc synth_report::run {} {
         error "No $hdl RTL files found in $rtl_dir"
     }
 
-    # --------------------------------------------------------
-    # Read RTL
-    # --------------------------------------------------------
-
-    if {$hdl eq "vhd"} {
-        if {$vhdl_std eq "2008"} {
-            read_vhdl -vhdl2008 $rtl_files
-        } else {
-            read_vhdl $rtl_files
-        }
-    } elseif {$hdl eq "sv"} {
-        read_verilog -sv $rtl_files
-    } else {
-        error "Unsupported HDL language: $hdl"
-    }
+    read_verilog $rtl_files
+    
 
     # --------------------------------------------------------
     # Synthesis
     # --------------------------------------------------------
 
-    synth_design \
-        -top $top \
-        -part $part
+    synth_design -top $top -part $part
 
     # --------------------------------------------------------
     # Reports

@@ -1,8 +1,10 @@
-.PHONY: image sine fft-output graph clean
+.PHONY: image sine fft-output graph clean rtl synth-report fpga-reports
 
 SAMPLES ?= 32
 CYCLES ?= 2
 AMPLITUDE ?= 127
+TOP ?= UartTop
+RTL_TOP ?= top.$(TOP)
 
 image: fft-output graph
 
@@ -22,6 +24,17 @@ graph:
 
 UartTop.v:
 	sbt "runMain top.UartTop"
+
+# Always regenerate RTL so reports do not use an old generated file.
+rtl:
+	sbt "runMain $(RTL_TOP)"
+
+synth-report: rtl
+	$(MAKE) -C vivado synth-report
+
+fpga-reports: rtl
+	$(MAKE) -C vivado build
+	$(MAKE) -C vivado reports
 
 .PHONY: fpga
 fpga: UartTop.v
