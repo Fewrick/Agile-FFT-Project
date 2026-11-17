@@ -19,7 +19,7 @@ class AudioTop(val samples: Int = 32) extends Module {
     val micClkOut = Output(Bool())
   })
 
-  val mic = Module(new Microphone(inputDataWidth, samples))
+  val mic = Module(new Microphone(inputDataWidth))
   val dsp = Module(new FFTDsp(inputDataWidth, samples))
 
   mic.io.micEn := true.B
