@@ -26,7 +26,7 @@ class AudioTopTest extends AnyFlatSpec with ChiselScalatestTester {
     val clocksPerSample = clocksPerBit * bitsPerSample
     val pdm = pcmToPdm(expected, bitsPerSample)
 
-    test(new AudioTop(samples)).withAnnotations(Seq(VerilatorBackendAnnotation)) { dut =>
+    test(new AudioTop(samples)) { dut =>
       dut.clock.setTimeout(0)
       dut.io.start.poke(false.B)
       dut.io.mask.poke("hffff".U)
