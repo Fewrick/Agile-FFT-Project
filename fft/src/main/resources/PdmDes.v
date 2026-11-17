@@ -60,21 +60,29 @@ begin
 end
 
 // Generate the done signal
+// always @(posedge clk)
+// begin
+//   if (pdm_clk_rising)
+//   begin
+//     if (cnt_bits==0)
+//     begin
+//         if (en_int)
+//         begin
+//             done_int<=1;
+//             dout <= pdm_tmp;
+//         end
+//      end
+//   end
+//   else
+//     done_int <= 0;
+// end
 always @(posedge clk)
 begin
-  if (pdm_clk_rising)
-  begin
-    if (cnt_bits==0)
-    begin
-        if (en_int)
-        begin
-            done_int<=1;
-            dout <= pdm_tmp;
-        end
-     end
+  done_int <= 0;
+  if (en_int && pdm_clk_rising && cnt_bits == 15) begin
+    done_int <= 1;
+    dout <= {pdm_tmp[14:0], pdm_m_data_i};
   end
-  else
-    done_int <= 0;
 end
 
 // Generate PDM Clock, that runs independent from the enable signal, therefore
