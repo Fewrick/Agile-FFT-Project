@@ -27,6 +27,8 @@
 # Vivado files
 !vivado/
 !vivado/**
+vivado/clockInfo.txt
+vivado/tight_setup_hold_pins.txt
 
 # uart-communicator
 !uart-communicator.py

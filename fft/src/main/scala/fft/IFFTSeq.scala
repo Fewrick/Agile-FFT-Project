@@ -24,14 +24,12 @@ class IFFTSeq(val outputWidth: Int, val samples: Int) extends Module {
   // Stores one complete frequency-domain frame and the intermediate results produced by the inverse FFT butterflies
   val buffer = Reg(Vec(samples, new ComplexSample(inputWidth)))
 
-
-
   // The FSM states for the IFFT operation
   // LOAD - Receive on complete frequency-domain frame
   // COMPUTE - Execute one radix-2 butterfly per clock cycle
   // OUTPUT - Stream the reconstructed time-domain frame
   object State extends ChiselEnum {
-    val LOAD, COMPUTE, OUTPUT = Value
+    val LOAD, COMPUTE, DRAIN, OUTPUT = Value
   }
   import State._
 
@@ -76,73 +74,107 @@ class IFFTSeq(val outputWidth: Int, val samples: Int) extends Module {
 
   // Inverse FFT computation
 
-  // One radix-2 butterfly per clock cycle
-  when(state === COMPUTE) {
-    for (s <- 0 until stages) {
-      when(stage === s.U) {
-        val half = 1 << s
-        val fftSize = 2 * half
+  // Shared address generation. A and B differ in bit `stage`.
+  val half = UIntToOH(stage, addrWidth)
+  val lowMask = half - 1.U
+  val index = butterflyIndex.pad(addrWidth)
+  val k = index & lowMask
 
-        // Determine the butterfly group and position within that group
-        val group = butterflyIndex / half.U
-        val k = butterflyIndex % half.U
+  val addrA = ((index & ~lowMask) << 1)(addrWidth - 1, 0) | k
+  val addrB = addrA | half
 
-        // Generate the stage-specific twiddle factors tables
-        val cosTable = VecInit(
-          (0 until half).map { j =>
-            val angle = 2 * math.Pi * j / fftSize
-            math.round(math.cos(angle) * SCALE).toInt.S(8.W)
-          }
-        )
+  // Map each stage's twiddle to the full-size table.
+  // The inverse transform uses positive sine.
+  val twiddleAddrWidth = log2Ceil((samples / 2) max 2)
+  val twiddleIndex = (k << (lastStage - stage))(twiddleAddrWidth - 1, 0)
 
-        val sinTable = VecInit(
-          (0 until half).map { j =>
-            val angle = 2 * math.Pi * j / fftSize
-            math.round(math.sin(angle) * SCALE).toInt.S(8.W)
-          }
-        )
+  val cosTable = VecInit((0 until (samples / 2)).map { j =>
+    val angle = 2 * math.Pi * j / samples
+    math.round(math.cos(angle) * SCALE).toInt.S(8.W)
+  })
 
-        val cosFactor = cosTable(k)
-        val sinFactor = sinTable(k)
+  val sinTable = VecInit((0 until (samples / 2)).map { j =>
+    val angle = 2 * math.Pi * j / samples
+    math.round(math.sin(angle) * SCALE).toInt.S(8.W)
+  })
 
-        val addrA = group * fftSize.U + k
-        val addrB = addrA + half.U
+  val cosFactor = if (samples == 2) cosTable(0) else cosTable(twiddleIndex)
+  val sinFactor = if (samples == 2) sinTable(0) else sinTable(twiddleIndex)
 
-        // Read the two operands for the current butterfly
-        val ar = buffer(addrA).re
-        val ai = buffer(addrA).im
-        val br = buffer(addrB).re
-        val bi = buffer(addrB).im
+  val issue = state === COMPUTE
 
-        // Perform the butterfly computation
-        val tr = ((cosFactor * br) -& (sinFactor * bi)) / SCALE.S(8.W)
-        val ti = ((cosFactor * bi) +& (sinFactor * br)) / SCALE.S(8.W)
+  val tag = Wire(new Bundle {
+    val addrA = UInt(addrWidth.W)
+    val addrB = UInt(addrWidth.W)
+    val last = Bool()
+  })
+  tag.addrA := addrA
+  tag.addrB := addrB
+  tag.last := butterflyIndex === lastButterfly
 
+  // E0: Register operands, twiddle, and writeback information.
+  val valid0 = RegNext(issue, false.B)
+  val tag0 = RegEnable(tag, issue)
+  val a0 = RegEnable(buffer(addrA), issue)
+  val b0 = RegEnable(buffer(addrB), issue)
+  val cos0 = RegEnable(cosFactor, issue)
+  val sin0 = RegEnable(sinFactor, issue)
 
-        val outAr = (ar +& tr) / 2.S
-        val outAi = (ai +& ti) / 2.S
-        val outBr = (ar -& tr) / 2.S
-        val outBi = (ai -& ti) / 2.S
+  // E1: Register the four signed products.
+  val valid1 = RegNext(valid0, false.B)
+  val tag1 = RegEnable(tag0, valid0)
+  val a1 = RegEnable(a0, valid0)
+  val reCos1 = RegEnable(b0.re * cos0, valid0)
+  val imSin1 = RegEnable(b0.im * sin0, valid0)
+  val imCos1 = RegEnable(b0.im * cos0, valid0)
+  val reSin1 = RegEnable(b0.re * sin0, valid0)
 
-        // Preserve the fixed internal fransform width
-        buffer(addrA).re := outAr(inputWidth - 1, 0).asSInt
-        buffer(addrA).im := outAi(inputWidth - 1, 0).asSInt
-        buffer(addrB).re := outBr(inputWidth - 1, 0).asSInt
-        buffer(addrB).im := outBi(inputWidth - 1, 0).asSInt
-      }
+  // E2: Combine the products at full precision.
+  val valid2 = RegNext(valid1, false.B)
+  val tag2 = RegEnable(tag1, valid1)
+  val a2 = RegEnable(a1, valid1)
+  val productRe2 = RegEnable(reCos1 -& imSin1, valid1)
+  val productIm2 = RegEnable(imCos1 +& reSin1, valid1)
+
+  // E3: Scale the complex product, preserving signed division.
+  val valid3 = RegNext(valid2, false.B)
+  val tag3 = RegEnable(tag2, valid2)
+  val a3 = RegEnable(a2, valid2)
+  val tr3 = RegEnable(productRe2 / SCALE.S(8.W), valid2)
+  val ti3 = RegEnable(productIm2 / SCALE.S(8.W), valid2)
+
+  // A signed shift rounds negative odd values down. Add one in that case
+  // to match the original signed /2, which truncates toward zero.
+  def normalize(value: SInt): SInt = {
+    val correction = Mux(value < 0.S && value(0), 1.S(2.W), 0.S(2.W))
+    val scaled = (value >> 1) + correction
+    scaled(inputWidth - 1, 0).asSInt
+  }
+
+  when(issue) {
+    when(tag.last) {
+      state := DRAIN
+    }.otherwise {
+      butterflyIndex := butterflyIndex + 1.U
     }
+  }
 
-    // Advance to tthe next butterfly or the next FFT stage
-    when(butterflyIndex === lastButterfly) {
+  // E4: Normalize and write both outputs. Advance on the final writeback.
+  when(valid3) {
+    buffer(tag3.addrA).re := normalize(a3.re +& tr3)
+    buffer(tag3.addrA).im := normalize(a3.im +& ti3)
+    buffer(tag3.addrB).re := normalize(a3.re -& tr3)
+    buffer(tag3.addrB).im := normalize(a3.im -& ti3)
+
+    when(tag3.last) {
       butterflyIndex := 0.U
       when(stage === lastStage) {
         outputIndex := 0.U
         state := OUTPUT
       }.otherwise {
         stage := stage + 1.U
+        state := COMPUTE
       }
-    }.otherwise {
-      butterflyIndex := butterflyIndex + 1.U
     }
   }
 

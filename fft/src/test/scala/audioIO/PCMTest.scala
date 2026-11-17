@@ -36,15 +36,17 @@ class PCMTest extends AnyFlatSpec with ChiselScalatestTester {
       .foldLeft(BigInt(0))((word, bit) => word | (BigInt(1) << bit))
   }
 
-  private def driveWord(
-      dut: PCM,
-      word: BigInt,
-      valid: Boolean = true
-  ): Unit = {
+  private def driveWord(dut: PCM, word: BigInt, valid: Boolean = true): Unit = {
     dut.io.pdmWord.poke(word.U)
     dut.io.pdmValid.poke(valid.B)
     dut.clock.step()
     dut.io.pdmValid.poke(false.B)
+  }
+
+  private def stepToPcmOutput(dut: PCM): Unit = {
+    dut.io.pcmValid.expect(false.B)
+    driveWord(dut, BigInt(0), valid = false)
+    dut.io.pcmValid.expect(true.B)
   }
 
   it should "convert PDM density into signed PCM samples" in {
@@ -55,7 +57,7 @@ class PCMTest extends AnyFlatSpec with ChiselScalatestTester {
           Seq.fill(decimation)(8)
       val produced = densities.grouped(decimation).map { group =>
         group.foreach(ones => driveWord(dut, wordWithOnes(ones)))
-        dut.io.pcmValid.expect(true.B)
+        stepToPcmOutput(dut)
         val sample = dut.io.pcmSample.peek().litValue.toInt
         sample
       }.toSeq
@@ -89,7 +91,7 @@ class PCMTest extends AnyFlatSpec with ChiselScalatestTester {
         val expectedOnes = group.map(_.bitCount).sum
         val expected = expectedPcm(expectedOnes)
 
-        dut.io.pcmValid.expect(true.B)
+        stepToPcmOutput(dut)
         dut.io.pcmSample.expect(expected.S)
       }
     }
@@ -116,17 +118,25 @@ class PCMTest extends AnyFlatSpec with ChiselScalatestTester {
       )
       val samples = scala.collection.mutable.ArrayBuffer[Int]()
 
-      words.grouped(decimation).zipWithIndex.foreach { case (group, sampleIndex) =>
-        group.foreach { word =>
-          driveWord(dut, word)
-          val pcmValid = dut.io.pcmValid.peek().litToBoolean
-          val pcm = dut.io.pcmSample.peek().litValue.toInt
-          val ones = word.bitCount
+      def recordCycle(sampleIndex: Int, word: Option[BigInt]): Unit = {
+        val pcmValid = dut.io.pcmValid.peek().litToBoolean
+        val pcm = dut.io.pcmSample.peek().litValue.toInt
+        val pdmBits = word.map(_.toString(2).reverse.padTo(pdmWordWidth, '0').reverse).getOrElse("")
+        val ones = word.map(_.bitCount.toString).getOrElse("")
+        rows += s"$sampleIndex,$pdmBits,$ones,$pcmValid,$pcm"
+        if (pcmValid) samples += pcm
+      }
 
-          rows += s"$sampleIndex,${word.toString(2).reverse.padTo(pdmWordWidth, '0').reverse},$ones,$pcmValid,$pcm"
-          if (pcmValid) samples += pcm
+      words.grouped(decimation).zipWithIndex.foreach { case (group, sampleIndex) =>
+        group.foreach { word => 
+          driveWord(dut, word) 
+          recordCycle(sampleIndex, Some(word)) 
         }
       }
+
+      // Let the final PCM sample reach the output.
+      driveWord(dut, BigInt(0), valid = false)
+      recordCycle(sampleCount - 1, None)
 
       val outputDir = Paths.get("target", "pcm")
       Files.createDirectories(outputDir)
