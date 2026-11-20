@@ -4,6 +4,7 @@ import chisel3._
 import chisel3.util._
 
 import audioIO.Microphone
+import audioIO.PWMSpeaker
 
 class AudioTop(val samples: Int = 32) extends Module {
   require(samples >= 2 && isPow2(samples))
@@ -17,6 +18,8 @@ class AudioTop(val samples: Int = 32) extends Module {
     val mask      = Input(UInt(16.W))
     val streamOut = Output(UInt(inputDataWidth.W))
     val micClkOut = Output(Bool())
+    val audPwm    = Output(Bool())
+    val audSd     = Output(Bool())
   })
 
   val mic = Module(new Microphone(inputDataWidth))
@@ -54,6 +57,17 @@ class AudioTop(val samples: Int = 32) extends Module {
   // DSP -> output register boundary.
   io.streamOut := RegNext(dsp.io.readData.asUInt, 0.U(inputDataWidth.W))
 
+  // Speaker
+  val speaker = Module(new NexysPWMSpeaker(inputDataWidth))
+  val latchedSample = RegInit(0.U(inputDataWidth.W))
+
+  // If dsp.io.readData is signed (-128 to 127), offset by +128 so silence/center is 128
+  val unsignedSample = (dsp.io.readData.asSInt + 128.S).asUInt
+
+  speaker.io.sampleIn := latchedSample
+  io.audPwm := speaker.io.pwmOut
+  io.audSd  := speaker.io.audioEn
+
   switch(state) {
     is(Idle) {
       when(acceptStart) {
@@ -88,6 +102,7 @@ class AudioTop(val samples: Int = 32) extends Module {
     }
 
     is(ReadOutput) {
+      latchedSample := unsignedSample
       when(addr === lastAddr) {
         state := Idle
       }.otherwise {
