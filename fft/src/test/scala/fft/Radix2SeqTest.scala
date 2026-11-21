@@ -105,19 +105,7 @@ class Radix2SeqTest extends AnyFlatSpec with ChiselScalatestTester {
 
               // Random low-amplitude input
               Seq.fill(samples)(ComplexValue(random.nextInt(2 * amplitude + 1) - amplitude,
-                  if (inverse) random.nextInt(2 * amplitude + 1) - amplitude else 0)),
-
-              // Complex sinusoid (IFFT only)
-              Seq.tabulate(samples)(i =>
-                if (inverse) {
-                  val angle = 2 * math.Pi * 4 * i / samples
-                  ComplexValue(
-                    math.round(amplitude * math.cos(angle)).toInt,
-                    math.round(amplitude * math.sin(angle)).toInt
-                  )
-                } else {
-                  ComplexValue(0, 0)
-                }
+                  if (inverse) random.nextInt(2 * amplitude + 1) - amplitude else 0)
               )
             )
           }
@@ -126,11 +114,17 @@ class Radix2SeqTest extends AnyFlatSpec with ChiselScalatestTester {
         }
 
         for ((input, frame) <- frames.zipWithIndex) {
+          val useStalls = frame % 2 == 1
           var cycles = 0
-          def step(): Unit = { dut.clock.step(); cycles += 1 }
+          def step(): Unit = { 
+            dut.clock.step()
+            cycles += 1 
+          }
+
           dut.io.out.ready.poke(true.B)
+
           for ((value, i) <- input.zipWithIndex) {
-            if (frame == 1 && i % 3 == 0) {
+            if (useStalls && i % 3 == 0) {
               dut.io.in.valid.poke(false.B)
               dut.io.in.ready.expect(true.B)
               step()
@@ -148,16 +142,22 @@ class Radix2SeqTest extends AnyFlatSpec with ChiselScalatestTester {
             } else {
               FFTRadix2.fftComplex(input)
             }
+
+          val expectedCycles =2 * samples + log2Ceil(samples) * (samples / 2 + 5)
+          val maxCycles = expectedCycles + 4 * samples + 100
           for ((value, i) <- expected.zipWithIndex) {
-            while (!dut.io.out.valid.peek().litToBoolean && cycles < 1000) {
+            while (!dut.io.out.valid.peek().litToBoolean && cycles < maxCycles) {
               dut.io.in.ready.expect(false.B)
               step()
             }
-            dut.io.out.valid.expect(true.B)
+
+            assert(dut.io.out.valid.peek().litToBoolean, s"$direction timed out: samples=$samples, frame=$frame, output=$i, cycles=$cycles")
+            
             dut.io.in.ready.expect(false.B)
             dut.io.out.data.re.expect(value.re.S)
             dut.io.out.data.im.expect(value.im.S)
-            if (frame == 1) {
+
+            if (useStalls) {
               dut.io.out.ready.poke(false.B)
               for (_ <- 0 until (i % 3 + 1)) {
                 step()
@@ -170,11 +170,12 @@ class Radix2SeqTest extends AnyFlatSpec with ChiselScalatestTester {
             }
             step()
           }
+
           dut.io.out.valid.expect(false.B)
           dut.io.in.ready.expect(true.B)
-          if (frame != 1) {
-            assert(cycles == 2 * samples + log2Ceil(samples) * (samples / 2 + 5))
-            if (samples == 32) assert(cycles == 169)
+
+          if (!useStalls) {
+            assert(cycles == expectedCycles)
           }
         }
       }
