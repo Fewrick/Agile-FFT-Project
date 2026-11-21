@@ -1,16 +1,24 @@
-.PHONY: image sine fft-output graph clean rtl synth-report fpga-reports
+# ============================================================
+# Configuration
+# ============================================================
 
 PYTHON ?= python
 WAVEFORM ?= sine
 PHASE ?= 0
 SEED ?= 0
 SAMPLES ?= 32
+WIDTH ?= 8
 CYCLES ?= 2
 AMPLITUDE ?= 127
 FREQUENCY ?= $(CYCLES)
 TOP ?= UartTop
 RTL_TOP ?= top.$(TOP)
 
+# ============================================================
+# Waveform generation
+# ============================================================
+
+.PHONY: image sine
 image: fft-output
 	$(MAKE) graph
 
@@ -18,7 +26,7 @@ image: fft-output
 sine:
 	$(MAKE) generate-hex WAVEFORM=sine
 
-.PHONY: generate-hex generate-hex-all generate-hex-suite
+.PHONY: generate-hex generate-hex-all
 generate-hex:
 	$(PYTHON) co-simulation/generate_hex.py --waveform $(WAVEFORM) \
 		--samples $(SAMPLES) --frequency $(FREQUENCY) --amplitude $(AMPLITUDE) \
@@ -27,11 +35,16 @@ generate-hex:
 generate-hex-all:
 	$(PYTHON) co-simulation/generate_hex.py --suite --samples $(SAMPLES) --replace
 
+# ============================================================
+# Co-simulation and plots
+# ============================================================
+
 .PHONY: test-generated-hex
 # Discover all existing generated_hex/<samples>/*.hex inputs without regenerating them.
 test-generated-hex: generate-hex-all
 	sbt "testOnly cosimulation.GeneratedHexTest"
 
+.PHONY: fft-output graph
 fft-output:
 	@test "$(SAMPLES)" = 32 || (echo "FFTOutputTest requires SAMPLES=32"; exit 1)
 	$(MAKE) generate-hex
@@ -44,13 +57,19 @@ graph:
 		--input-hex "$(CURDIR)/co-simulation/generated_hex/$(SAMPLES)/$(WAVEFORM).hex" \
 		--save co-simulation/fft_comparison.png
 
-UartTop.v:
-	sbt "runMain top.UartTop"
+# ============================================================
+# RTL generation
+# ============================================================
 
-# Always regenerate RTL so reports do not use an old generated file.
+.PHONY: rtl
 rtl:
-	sbt "runMain $(RTL_TOP)"
+	sbt -Dsamples=$(SAMPLES) -Dwidth=$(WIDTH) "runMain $(RTL_TOP)"
 
+# ============================================================
+# FPGA builds and reports
+# ============================================================
+
+.PHONY: synth-report fpga-reports fpga
 synth-report: rtl
 	$(MAKE) -C vivado synth-report TOP="$(TOP)"
 
@@ -58,10 +77,14 @@ fpga-reports: rtl
 	$(MAKE) -C vivado build TOP="$(TOP)"
 	$(MAKE) -C vivado reports
 
-.PHONY: fpga
 fpga: rtl
 	$(MAKE) -C vivado build TOP="$(TOP)"
 
+# ============================================================
+# Cleanup
+# ============================================================
+
+.PHONY: clean
 clean:
 	rm -rf test_run_dir
 	# Generated inputs are retained to preserve manually supplied regression vectors.

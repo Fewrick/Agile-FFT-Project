@@ -4,7 +4,7 @@ import chisel3._
 import chisel3.util._
 import chisel.lib.uart._
 
-class UartTop(val freq : Int, val baud : Int, val samples : Int = 32, val width : Int = 8) extends Module {
+class UartTop(val freq : Int, val baud : Int, val samples : Int, val width : Int = 8) extends Module {
   val io = IO(new Bundle {
     val rx = Input(Bool())
     val tx = Output(Bool())
@@ -74,5 +74,7 @@ class UartTop(val freq : Int, val baud : Int, val samples : Int = 32, val width 
 }
 
 object UartTop extends App {
-  emitVerilog(new UartTop(100000000, 115200))
+  val samples = sys.props.get("samples").map(_.toInt).getOrElse(32)
+  val width = sys.props.get("width").map(_.toInt).getOrElse(8)
+  emitVerilog(new UartTop(100000000, 115200, samples, width))
 }
