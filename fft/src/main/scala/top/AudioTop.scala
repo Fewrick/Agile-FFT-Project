@@ -114,5 +114,5 @@ class AudioTop(val samples: Int, val width : Int = 8) extends Module {
 object AudioTop extends App {
   val samples = sys.props.get("samples").map(_.toInt).getOrElse(32)
   val width = sys.props.get("width").map(_.toInt).getOrElse(8)
-  emitVerilog(new AudioTop(samples, width))
+  emitVerilog(new AudioTop(samples, width), Array("--target-dir", "generated"))
 }

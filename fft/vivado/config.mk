@@ -13,7 +13,7 @@ PART         = xc7a100tcsg324-1
 # Directories
 # ============================================================
 
-RTL_DIR      = ../
+RTL_DIR      = ../generated
 TB_DIR       = tb
 XDC_DIR      = constraints
 

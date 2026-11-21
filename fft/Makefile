@@ -61,6 +61,7 @@ graph:
 # RTL generation
 # ============================================================
 
+# Scala emits Verilog, FIRRTL, annotations, and black-box resources into generated/.
 .PHONY: rtl
 rtl:
 	sbt -Dsamples=$(SAMPLES) -Dwidth=$(WIDTH) "runMain $(RTL_TOP)"
@@ -93,6 +94,5 @@ clean:
 	rm -rf co-simulation/__pycache__/
 	rm -rf co-simulation/generated_hex
 	rm -rf co-simulation/output_hex
-	rm -f *.v
-	rm -f *.fir
+	rm -rf generated
 	cd vivado && make clean

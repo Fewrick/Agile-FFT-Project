@@ -56,7 +56,3 @@ class IFFTComb(
     }
   }
 }
-
-object IFFTComb extends App {
-  emitVerilog(new IFFTComb())
-}
