@@ -3,7 +3,7 @@ package fft
 import chisel3._
 import chisel3.util._
 import chiseltest._
-import cosimulation.ComplexValue
+import cosimulation.{ComplexValue, FFTRadix2}
 import interfaces._
 import org.scalatest.flatspec.AnyFlatSpec
 
@@ -31,36 +31,12 @@ class SeqTransformHarness(width: Int, samples: Int, inverse: Boolean) extends Mo
 }
 
 class Radix2SeqTest extends AnyFlatSpec with ChiselScalatestTester {
-  private def wrap(value: Long, width: Int): Int = {
-    val modulus = 1L << width
-    val bits = value & (modulus - 1)
-    (if (bits >= modulus / 2) bits - modulus else bits).toInt
-  }
+  private def wrap(value: Int, width: Int): Int = {
+    val mask = (1L << width) - 1
+    val bits = value.toLong & mask
+    val signBit = 1L << (width - 1)
 
-  // Recursive reference models each stage's original wrap and signed division.
-  private def reference(input: Seq[ComplexValue], width: Int, inverse: Boolean): Seq[ComplexValue] = {
-    val fullWidth = width + log2Ceil(input.size)
-    def transform(x: Seq[ComplexValue]): Seq[ComplexValue] = {
-      if (x.size == 1) x
-      else {
-        val even = transform(x.indices.collect { case i if i % 2 == 0 => x(i) })
-        val odd = transform(x.indices.collect { case i if i % 2 == 1 => x(i) })
-        val resultWidth = if (inverse) fullWidth else width + log2Ceil(x.size)
-        def finish(value: Long): Int = wrap(if (inverse) value / 2 else value, resultWidth)
-        val pairs = (0 until x.size / 2).map { k =>
-          val angle = 2 * math.Pi * k / x.size
-          val cos = math.round(math.cos(angle) * 127)
-          val sine = if (inverse) math.sin(angle) else -math.sin(angle)
-          val sin = math.round(sine * 127)
-          val re = (odd(k).re * cos - odd(k).im * sin) / 127
-          val im = (odd(k).im * cos + odd(k).re * sin) / 127
-          (ComplexValue(finish(even(k).re + re), finish(even(k).im + im)),
-           ComplexValue(finish(even(k).re - re), finish(even(k).im - im)))
-        }
-        pairs.map(_._1) ++ pairs.map(_._2)
-      }
-    }
-    transform(input).map(v => if (inverse) ComplexValue(wrap(v.re, width), wrap(v.im, width)) else v)
+    (if ((bits & signBit) != 0) bits - (1L << width) else bits).toInt
   }
 
   for (inverse <- Seq(false, true); samples <- Seq(2, 4, 32); width <- Seq(3, 8)) {
@@ -94,7 +70,12 @@ class Radix2SeqTest extends AnyFlatSpec with ChiselScalatestTester {
             step()
           }
           dut.io.in.valid.poke(false.B)
-          val expected = reference(input, width, inverse)
+          val expected =
+            if (inverse) {
+              FFTRadix2.ifftComplex(input).map { v => ComplexValue(wrap(v.re, width), wrap(v.im, width)) }
+            } else {
+              FFTRadix2.fftComplex(input) 
+            }
           for ((value, i) <- expected.zipWithIndex) {
             while (!dut.io.out.valid.peek().litToBoolean && cycles < 1000) {
               dut.io.in.ready.expect(false.B)
