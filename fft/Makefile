@@ -47,6 +47,6 @@ clean:
 	rm -f co-simulation/fft_comparison.png
 	rm -f co-simulation/comparison_metrics.json
 	rm -rf co-simulation/__pycache__/
-	rm UartTop.v
-	rm UartTop.fir
+	rm -f *.v
+	rm -f *.fir
 	cd vivado && make clean
