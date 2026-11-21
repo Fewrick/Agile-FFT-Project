@@ -25,11 +25,12 @@ generate-hex:
 		--phase $(PHASE) --seed $(SEED) --replace
 
 generate-hex-all:
-	$(PYTHON) co-simulation/generate_hex.py --all --samples $(SAMPLES) \
-		--frequency $(FREQUENCY) --amplitude $(AMPLITUDE) --phase $(PHASE) --seed $(SEED) --replace
-
-generate-hex-suite:
 	$(PYTHON) co-simulation/generate_hex.py --suite --samples $(SAMPLES) --replace
+
+.PHONY: test-generated-hex
+# Discover all existing generated_hex/<samples>/*.hex inputs without regenerating them.
+test-generated-hex: generate-hex-all
+	sbt "testOnly cosimulation.GeneratedHexTest"
 
 fft-output:
 	@test "$(SAMPLES)" = 32 || (echo "FFTOutputTest requires SAMPLES=32"; exit 1)

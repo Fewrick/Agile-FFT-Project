@@ -4,20 +4,9 @@ import chisel3._
 import chiseltest._
 import chiseltest.simulator.VerilatorBackendAnnotation
 import org.scalatest.flatspec.AnyFlatSpec
+import _root_.util.SignalTestUtils.pcmToPdm
 
 class AudioTopTest extends AnyFlatSpec with ChiselScalatestTester {
-  private def pcmToPdm(sample: Int, bitCount: Int): Vector[Boolean] = {
-    require(sample >= -128 && sample <= 127)
-
-    var accumulator = 128
-    Vector.tabulate(bitCount) { _ =>
-      accumulator += sample + 128
-      val bit = accumulator >= 256
-      if (bit) accumulator -= 256
-      bit
-    }
-  }
-
   it should "reproduce a constant PCM value with all FFT bins enabled" in {
     val samples = 32
     val expected = 65
