@@ -1,5 +1,19 @@
 namespace eval project {}
 
+# Each top owns its constraints; never load another top's pin assignments.
+proc project::constraints_dir {} {
+    return [file join [file normalize [cfg::require XDC_DIR]] [cfg::require TOP]]
+}
+
+proc project::constraint_files {} {
+    set directory [project::constraints_dir]
+    set files [util::find_files $directory {.xdc}]
+    if {[llength $files] == 0} {
+        error "No XDC constraints for TOP=[cfg::require TOP] in $directory"
+    }
+    return $files
+}
+
 proc project::file_path {} {
     set project_name [cfg::require PROJECT]
     set project_dir  [file normalize [cfg::require PROJECT_DIR]]
@@ -18,21 +32,18 @@ proc project::create {} {
 
     set rtl_dir      [file normalize [cfg::require RTL_DIR]]
     set tb_dir       [file normalize [cfg::require TB_DIR]]
-    set xdc_dir      [file normalize [cfg::require XDC_DIR]]
     set project_dir  [file normalize [cfg::require PROJECT_DIR]]
 
     set hdl          [cfg::hdl_language]
     set hdl_exts     [cfg::hdl_extensions]
 
-    set rtl_dir      [file normalize [cfg::require RTL_DIR]]
-
-    set tb_dir       [file normalize [cfg::require TB_DIR]]
-    set xdc_dir      [file normalize [cfg::require XDC_DIR]]
-    set project_dir  [file normalize [cfg::require PROJECT_DIR]]
-
     set vhdl_std     [cfg::require VHDL_STD]
 
+    set xdc_files [project::constraint_files]
+
     puts "Creating project: $project_name"
+    puts "Top: $top"
+    puts "Constraints: [join $xdc_files {, }]"
     puts "Source language: $hdl ([join $hdl_exts {, }])"
 
     create_project \
@@ -73,14 +84,7 @@ proc project::create {} {
     # Constraints
     # --------------------------------------------------------
 
-    set xdc_files [util::find_files $xdc_dir {.xdc}]
-
-    if {[llength $xdc_files] > 0} {
-        add_files \
-            -fileset constrs_1 \
-            -norecurse \
-            $xdc_files
-    }
+    add_files -fileset constrs_1 -norecurse $xdc_files
 
     # --------------------------------------------------------
     # HDL file types

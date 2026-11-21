@@ -52,15 +52,15 @@ rtl:
 	sbt "runMain $(RTL_TOP)"
 
 synth-report: rtl
-	$(MAKE) -C vivado synth-report
+	$(MAKE) -C vivado synth-report TOP="$(TOP)"
 
 fpga-reports: rtl
-	$(MAKE) -C vivado build
+	$(MAKE) -C vivado build TOP="$(TOP)"
 	$(MAKE) -C vivado reports
 
 .PHONY: fpga
-fpga: UartTop.v
-	cd vivado && make
+fpga: rtl
+	$(MAKE) -C vivado build TOP="$(TOP)"
 
 clean:
 	rm -rf test_run_dir
