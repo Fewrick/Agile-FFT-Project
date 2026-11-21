@@ -1,25 +1,46 @@
 .PHONY: image sine fft-output graph clean rtl synth-report fpga-reports
 
+PYTHON ?= python
+WAVEFORM ?= sine
+PHASE ?= 0
+SEED ?= 0
 SAMPLES ?= 32
 CYCLES ?= 2
 AMPLITUDE ?= 127
+FREQUENCY ?= $(CYCLES)
 TOP ?= UartTop
 RTL_TOP ?= top.$(TOP)
 
-image: fft-output graph
+image: fft-output
+	$(MAKE) graph
 
+# Keep the sine target for existing callers.
 sine:
-	python co-simulation/generate_sine.py \
-		--samples $(SAMPLES) \
-		--cycles $(CYCLES) \
-		--amplitude $(AMPLITUDE)
+	$(MAKE) generate-hex WAVEFORM=sine
 
-fft-output: sine
-	sbt "testOnly cosimulation.FFTOutputTest"
+.PHONY: generate-hex generate-hex-all generate-hex-suite
+generate-hex:
+	$(PYTHON) co-simulation/generate_hex.py --waveform $(WAVEFORM) \
+		--samples $(SAMPLES) --frequency $(FREQUENCY) --amplitude $(AMPLITUDE) \
+		--phase $(PHASE) --seed $(SEED) --replace
+
+generate-hex-all:
+	$(PYTHON) co-simulation/generate_hex.py --all --samples $(SAMPLES) \
+		--frequency $(FREQUENCY) --amplitude $(AMPLITUDE) --phase $(PHASE) --seed $(SEED) --replace
+
+generate-hex-suite:
+	$(PYTHON) co-simulation/generate_hex.py --suite --samples $(SAMPLES) --replace
+
+fft-output:
+	@test "$(SAMPLES)" = 32 || (echo "FFTOutputTest requires SAMPLES=32"; exit 1)
+	$(MAKE) generate-hex
+	FFT_INPUT="$(CURDIR)/co-simulation/generated_hex/$(SAMPLES)/$(WAVEFORM).hex" FFT_PYTHON="$(PYTHON)" \
+		sbt "testOnly cosimulation.FFTOutputTest"
 
 graph:
 	MPLCONFIGDIR=/tmp/fft-matplotlib MPLBACKEND=Agg \
-	python co-simulation/compare_fft.py \
+	$(PYTHON) co-simulation/compare_fft.py --samples $(SAMPLES) \
+		--input-hex "$(CURDIR)/co-simulation/generated_hex/$(SAMPLES)/$(WAVEFORM).hex" \
 		--save co-simulation/fft_comparison.png
 
 UartTop.v:
@@ -42,11 +63,12 @@ fpga: UartTop.v
 
 clean:
 	rm -rf test_run_dir
-	rm -f co-simulation/*.hex
-	rm -f co-simulation/*.txt
+	# Generated inputs are retained to preserve manually supplied regression vectors.
 	rm -f co-simulation/fft_comparison.png
 	rm -f co-simulation/comparison_metrics.json
 	rm -rf co-simulation/__pycache__/
+	rm -rf co-simulation/generated_hex
+	rm -rf co-simulation/output_hex
 	rm -f *.v
 	rm -f *.fir
 	cd vivado && make clean

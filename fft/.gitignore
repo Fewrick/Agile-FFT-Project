@@ -15,7 +15,9 @@
 !co-simulation/
 !co-simulation/fft.py
 !co-simulation/compare_fft.py
-!co-simulation/generate_sine.py
+!co-simulation/generate_hex.py
+!co-simulation/test_generate_hex.py
+!co-simulation/README.md
 !co-simulation/plot_pcm.py
 
 # Makefile

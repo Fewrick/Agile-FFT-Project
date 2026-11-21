@@ -1,4 +1,4 @@
-"""Compare fresh signed hardware/software exports with an independent NumPy FFT."""
+"""Compare signed exports in output_hex/ with an independent NumPy FFT."""
 import argparse
 import json
 from pathlib import Path
@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 from fft import fft
 
 DIRECTORY = Path(__file__).resolve().parent
+OUTPUT_DIRECTORY = DIRECTORY / 'output_hex'
 FFT_BITS = 13
 DFT_BITS = 13
 SCALA_BITS = 32
@@ -103,17 +104,17 @@ def plot(samples: np.ndarray, outputs: dict, path: Path) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--samples', type=int, default=32)
-    parser.add_argument('--input-hex', type=Path, default=DIRECTORY / 'sine.hex')
+    parser.add_argument('--input-hex', type=Path, help='Input HEX (default: generated_hex/<samples>/sine.hex)')
     parser.add_argument('--save', type=Path, help='Save plot without opening it')
     parser.add_argument('--report', type=Path, default=DIRECTORY / 'comparison_metrics.json')
     args = parser.parse_args()
-    path = args.input_hex
+    path = args.input_hex or DIRECTORY / 'generated_hex' / str(args.samples) / 'sine.hex'
     if not path.is_absolute() and path.parent == Path('.'):
         path = DIRECTORY / path
     samples = load_hex(path, 8)
     if len(samples) != args.samples:
         raise ValueError("Input sample count differs from CLI")
-    outputs, report = compare_case(DIRECTORY, samples)
+    outputs, report = compare_case(OUTPUT_DIRECTORY, samples)
     for name, result in report.items():
         print(f"{name}: "
               f"max error = {result['max_error']:.6f}, "

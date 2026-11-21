@@ -9,13 +9,23 @@ import org.scalatest.flatspec.AnyFlatSpec
 
 import java.nio.file.{Files, Path, Paths}
 import scala.io.Source
+import scala.sys.process._
 
 class FFTOutputTest extends AnyFlatSpec with ChiselScalatestTester {
 
   behavior of "FFT output generation"
 
-  private val outputDir = Paths.get("co-simulation")
-  private val inputPath = Paths.get(sys.env.getOrElse("FFT_INPUT", outputDir.resolve("sine.hex").toString))
+  // sbt runs at the project root; also support launches from a child directory.
+  private val projectRoot = Iterator.iterate(Paths.get("").toAbsolutePath)(_.getParent)
+    .takeWhile(_ != null)
+    .find(path => Files.isRegularFile(path.resolve("build.sbt")) &&
+      Files.isDirectory(path.resolve("co-simulation")))
+    .getOrElse(throw new IllegalArgumentException("Cannot locate FFT project root"))
+  private val coSimulationDir = projectRoot.resolve("co-simulation")
+  private val outputDir = projectRoot.resolve("co-simulation/output_hex")
+  private val defaultInput = coSimulationDir.resolve("generated_hex/32/sine.hex")
+  private val inputPath = sys.env.get("FFT_INPUT")
+    .map(value => projectRoot.resolve(value).normalize()).getOrElse(defaultInput)
 
   private val simulator = sys.env.get("FFT_SIMULATOR") match {
     case Some("verilator") => Seq(VerilatorBackendAnnotation)
@@ -25,11 +35,19 @@ class FFTOutputTest extends AnyFlatSpec with ChiselScalatestTester {
   }
 
   private def readInput(path: Path): Seq[Int] = {
-    val source = Source.fromFile(path.toFile)
+    if (!Files.isRegularFile(path) && !sys.env.contains("FFT_INPUT")) {
+      val python = sys.env.getOrElse("FFT_PYTHON", "python")
+      val status = Process(Seq(python, coSimulationDir.resolve("generate_hex.py").toString,
+        "--waveform", "sine", "--samples", "32"), projectRoot.toFile).!
+      require(status == 0, s"Waveform generation failed ($status); run make sine or set FFT_PYTHON")
+    }
+    require(Files.isRegularFile(path), s"Missing FFT input: $path; run make sine")
+    val source = Source.fromFile(path.toFile, "US-ASCII")
     try {
-      source.getLines().map(_.trim).filter(_.nonEmpty).map { line =>
+      source.getLines().zipWithIndex.map { case (line, index) =>
+        require(line.matches("[0-9a-fA-F]{2}"),
+          s"$path:${index + 1}: expected exactly one two-digit 8-bit HEX sample")
         val raw = Integer.parseInt(line, 16)
-        require(raw >= 0 && raw < 256, "Expected 8-bit HEX input")
         if (raw >= 128) raw - 256 else raw
       }.toVector
     } finally {
@@ -55,7 +73,7 @@ class FFTOutputTest extends AnyFlatSpec with ChiselScalatestTester {
     Files.createDirectories(outputDir)
 
     val input = readInput(inputPath)
-    require(input.length == 32, "Expected 32 input samples")
+    require(input.length == 32, s"$inputPath: expected 32 input samples, got ${input.length}")
 
     // Scala floating-point FFT
     val (fp) = FFTFP.fft(input.map(_.toDouble))
