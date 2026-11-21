@@ -42,7 +42,7 @@ class Radix2SeqTest extends AnyFlatSpec with ChiselScalatestTester {
   for (inverse <- Seq(false, true); samples <- Seq(32, 64, 128)) {
     val width = 8
     val direction = if (inverse) "IFFTSeq" else "FFTSeq"
-    direction should s"match exact wrapped results at width $width, size $samples, with stalls and repeated frames" in {
+    direction should s"match exact wrapped results at width $width, samples $samples, with stalls and repeated frames" in {
       test(new SeqTransformHarness(width, samples, inverse)) { dut =>
         val random = new scala.util.Random(42)
         val dataWidth = width + (if (inverse) log2Ceil(samples) else 0)
