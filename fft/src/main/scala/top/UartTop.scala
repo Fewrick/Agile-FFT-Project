@@ -10,6 +10,9 @@ class UartTop(val freq : Int, val baud : Int, val samples : Int, val width : Int
     val tx = Output(Bool())
   })
 
+  // Debug print for the parameters
+  println(s"UartTop: freq = $freq, baud = $baud, samples = $samples, width = $width")
+
   val tx = Module(new Tx(freq, baud))
   io.tx := tx.io.txd
   tx.io.channel.bits := DontCare
