@@ -32,5 +32,6 @@
 vivado/clockInfo.txt
 vivado/tight_setup_hold_pins.txt
 
-# uart-communicator
+# uart applications
 !uart-communicator.py
+!uart-audio-processor.py

@@ -82,7 +82,7 @@ fpga-reports: generated/$(TOP).v
 fpga: generated/$(TOP).v
 	$(MAKE) -C vivado build TOP="$(TOP)"
 
-fpga_flash:
+fpga-flash:
 	$(MAKE) -C vivado flash-linux
 
 # ============================================================

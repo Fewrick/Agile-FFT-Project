@@ -8,6 +8,7 @@ class UartTop(val freq : Int, val baud : Int, val samples : Int, val width : Int
   val io = IO(new Bundle {
     val rx = Input(Bool())
     val tx = Output(Bool())
+    val mask = Input(UInt(16.W))
   })
 
   val tx = Module(new Tx(freq, baud))
@@ -26,7 +27,7 @@ class UartTop(val freq : Int, val baud : Int, val samples : Int, val width : Int
   dspTop.io.start := false.B
   dspTop.io.readAddr := DontCare
   dspTop.io.readEn := DontCare
-  dspTop.io.mask := Fill(16, 1.U)
+  dspTop.io.mask := io.mask
 
   object State extends ChiselEnum {
     val write, run, read = Value
