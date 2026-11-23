@@ -12,7 +12,6 @@ CYCLES ?= 2
 AMPLITUDE ?= 127
 FREQUENCY ?= $(CYCLES)
 TOP ?= UartTop
-RTL_TOP ?= top.$(TOP)
 
 # ============================================================
 # Waveform generation
@@ -62,24 +61,29 @@ graph:
 # ============================================================
 
 # Scala emits Verilog, FIRRTL, annotations, and black-box resources into generated/.
+generated/$(TOP).v: $(wildcard src/main/scala/*/*.scala)
+	sbt -Dsamples=$(SAMPLES) -Dwidth=$(WIDTH) "runMain top.$(TOP)"
+
 .PHONY: rtl
-rtl:
-	sbt -Dsamples=$(SAMPLES) -Dwidth=$(WIDTH) "runMain $(RTL_TOP)"
+rtl: generated/$(TOP).v
 
 # ============================================================
 # FPGA builds and reports
 # ============================================================
 
-.PHONY: synth-report fpga-reports fpga
-synth-report: rtl
+.PHONY: synth-report fpga-reports fpga fpga_flash
+synth-report: generated/$(TOP).v
 	$(MAKE) -C vivado synth-report TOP="$(TOP)"
 
-fpga-reports: rtl
-	$(MAKE) -C vivado build TOP="$(TOP)"
+fpga-reports: generated/$(TOP).v
+	$(MAKE) -C viv ado build TOP="$(TOP)"
 	$(MAKE) -C vivado reports
 
-fpga: rtl
+fpga: generated/$(TOP).v
 	$(MAKE) -C vivado build TOP="$(TOP)"
+
+fpga_flash:
+	$(MAKE) -C vivado flash-linux
 
 # ============================================================
 # Cleanup
