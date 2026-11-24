@@ -1,8 +1,6 @@
 # FFT + signal processing + inverse-FFT  
 Repository for the DTU Agile Hardware Design course [Agile Hardware Design [02203]](https://lifelonglearning.dtu.dk/compute/enkeltfag/agil-hardwareudvikling/), containing the project files for group 10. 
 
----
-
 ## Introduction / Motivation 
 We wanted to explore how digital signal processing could be implemented directly in hardware. We were interested in how an FFT algorithm works, because it gives an interesting way to break sound into frequency components.  We wanted to work with the whole process of using an FFT to  break down an audio clip, filtering specific selected frequencies, and applying an inverse FFT to reconstruct the clip. Thus learning how signal and music processing works when implemented in hardware. 
 
