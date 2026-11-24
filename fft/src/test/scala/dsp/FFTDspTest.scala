@@ -1,6 +1,7 @@
 
 package dsp
 
+import util.FrequencyMaskReference.maskIndex
 import util.SignalTestUtils.wrapSigned
 import chisel3._
 import chiseltest._
@@ -26,9 +27,7 @@ class FFTDspTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
   def applyMask(fft: Seq[ComplexValue], mask: Int): Seq[ComplexValue] = {
     require(fft.length == samples)
     fft.zipWithIndex.map { case (bin, k) =>
-      // Match BandpassFilter's current pairing of k with N-1-k.
-      val maskIndex = math.min(k, samples - 1 - k) * 16 / (samples / 2)
-      val enabled = ((mask >> maskIndex) & 1) == 1
+      val enabled = ((mask >> maskIndex(k, samples)) & 1) == 1
       if (enabled) bin else ComplexValue(0, 0)
     }
   }
