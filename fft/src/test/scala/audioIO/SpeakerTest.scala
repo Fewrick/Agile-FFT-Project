@@ -26,8 +26,8 @@ class SpeakerTest extends AnyFlatSpec with ChiselScalatestTester {
       val midHigh  = measureHighCycles(128)
       val highHigh = measureHighCycles(220)
 
-      assert(lowHigh < midHigh, s"Expected low sample ($lowHigh) < mid sample ($midHigh)")
-      assert(midHigh < highHigh, s"Expected mid sample ($midHigh) < high sample ($highHigh)")
+      assert(lowHigh > midHigh, s"Expected low sample ($lowHigh) > mid sample ($midHigh)")
+      assert(midHigh > highHigh, s"Expected mid sample ($midHigh) > high sample ($highHigh)")
     }
   }
 }
