@@ -27,7 +27,7 @@ class AudioTop(val samples: Int, val width: Int, val sampleRate: Int, val record
     val process   = Input(Bool()) // FFT -> mask -> IFFT, in place
     val output    = Input(Bool()) // Play the current recording
     val mask      = Input(UInt(bands.W))
-    val streamOut = Output(UInt(width.W))
+    val streamOut = Output(UInt(width.W)) // LED status: stored, processed, playing
     val micClkOut = Output(Bool())
     val audPwm    = Output(Bool())
     val audSd     = Output(Bool())
@@ -105,6 +105,7 @@ class AudioTop(val samples: Int, val width: Int, val sampleRate: Int, val record
   val processRise = buttonRise(io.process)
   val outputRise = buttonRise(io.output)
   val hasRecording = RegInit(false.B)
+  val hasProcessed = RegInit(false.B)
   // Simultaneous presses have deterministic priority: capture, process, output.
   // Busy presses are ignored rather than queued for a later operation.
   val acceptStart = state === Idle && startRise
@@ -151,8 +152,9 @@ class AudioTop(val samples: Int, val width: Int, val sampleRate: Int, val record
   dsp.io.start := state === Launch
   dsp.io.mask  := RegEnable(io.mask, 0.U(bands.W), acceptProcess)
 
-  // DSP -> output register boundary.
-  io.streamOut := RegEnable(store.io.writeData.asUInt, 0.U(width.W), store.io.writeEn)
+  // LED0/1 persist until capture/reprocessing invalidates their status.
+  // LED2 is active only while the speaker is busy; all other LEDs are off.
+  io.streamOut := Cat(0.U((width - 3).W), speaker.io.busy, hasProcessed, hasRecording)
 
   // Speaker control
   speaker.io.start := state === Playback
@@ -166,9 +168,11 @@ class AudioTop(val samples: Int, val width: Int, val sampleRate: Int, val record
         recordingAddr := 0.U
         frameStart := 0.U
         hasRecording := false.B
+        hasProcessed := false.B
         state := Capture
       }.elsewhen(acceptProcess) {
         frameStart := 0.U
+        hasProcessed := false.B
         state := LoadFrame
       }.elsewhen(acceptOutput) {
         state := Playback
@@ -220,6 +224,7 @@ class AudioTop(val samples: Int, val width: Int, val sampleRate: Int, val record
 
     is(ProcessingDone) {
       // All processed samples are stored; wait for the output button.
+      hasProcessed := true.B
       state := Idle
     }
 

@@ -55,6 +55,7 @@ class AudioTopTest extends AnyFlatSpec with ChiselScalatestTester {
       d.clock.setTimeout(0)
       d.io.start.poke(false.B); d.io.process.poke(false.B); d.io.output.poke(false.B)
       d.io.streamIn.poke(false.B); d.io.mask.poke(0.U)
+      d.io.streamOut.expect(0.U)
 
       def press(button: Bool): Unit = {
         button.poke(true.B); d.clock.step(5); button.poke(false.B)
@@ -77,28 +78,36 @@ class AudioTopTest extends AnyFlatSpec with ChiselScalatestTester {
       press(d.io.output); d.clock.step(5)
       press(d.io.process); d.clock.step(5)
       d.debug.idle.expect(true.B); expectCounts(0, 0, 0, 0)
+      d.io.streamOut.expect(0.U)
 
       for (session <- 0 until 2) {
         press(d.io.start)
+        d.io.streamOut.expect(0.U)
         // Busy commands must be ignored, including another capture request.
         d.clock.step(5)
         press(d.io.start); press(d.io.process); press(d.io.output)
         finish(session, 80000)
         expectCounts(8, 0, 0, 0)
+        d.io.streamOut.expect(1.U)
         d.clock.step(1000); expectCounts(8, 0, 0, 0)
         val input = d.debug.captured.map(_.peek().litValue.toInt).toSeq
 
         // Playback before processing is useful for listening to the raw recording.
-        press(d.io.output); finish(session, 80000)
+        press(d.io.output)
+        d.io.streamOut.expect(5.U)
+        finish(session, 80000)
+        d.io.streamOut.expect(1.U)
         expectCounts(8, 0, 0, 8)
         input.zipWithIndex.foreach { case (v, i) => d.debug.played(i).expect(v.S) }
 
         d.io.mask.poke(65535.U)
         // Keep process held across completion: it must launch only once.
         d.io.process.poke(true.B); d.clock.step(5)
+        d.io.streamOut.expect(1.U)
         d.io.mask.poke(0.U)
         finish(session, 10000)
         d.clock.step(1000); expectCounts(8, 2, 8, 8)
+        d.io.streamOut.expect(3.U)
         d.io.process.poke(false.B); d.clock.step(5)
         val expected = input.grouped(4).flatMap { frame =>
           FFTRadix2.ifft(FFTRadix2.fft(frame)).map(wrapSigned(_, 8))
@@ -106,7 +115,10 @@ class AudioTopTest extends AnyFlatSpec with ChiselScalatestTester {
         expected.zipWithIndex.foreach { case (v, i) => d.debug.processed(i).expect(v.S) }
 
         for (_ <- 0 until 2) {
-          press(d.io.output); finish(session, 80000)
+          press(d.io.output)
+          d.io.streamOut.expect(7.U)
+          finish(session, 80000)
+          d.io.streamOut.expect(3.U)
           expectCounts(8, 2, 8, 8)
           expected.zipWithIndex.foreach { case (v, i) => d.debug.played(i).expect(v.S) }
         }

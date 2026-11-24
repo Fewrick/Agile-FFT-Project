@@ -56,7 +56,7 @@ define RUN_FRESH_FLOW
 endef
 
 
-.PHONY: all project pins build sim full reports flash flash-mac flash-windows clean
+.PHONY: all project pins build sim full reports flash flash-mac flash-linux flash-windows clean
 
 all: build
 
@@ -109,9 +109,9 @@ endif
 
 
 flash-mac: 
-	$(OPENFPGALOADER) \
-		-b $(BOARD) \
-		$(BITSTREAM)
+	"$(OPENFPGALOADER)" \
+		-b "$(BOARD)" \
+		"$(BITSTREAM)"
 
 
 flash-windows: 

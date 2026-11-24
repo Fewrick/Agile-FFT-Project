@@ -1,8 +1,6 @@
 # FFT + signal processing + inverse-FFT  
 Repository for the DTU Agile Hardware Design course [Agile Hardware Design [02203]](https://lifelonglearning.dtu.dk/compute/enkeltfag/agil-hardwareudvikling/), containing the project files for group 10. 
 
----
-
 ## Introduction / Motivation 
 We wanted to explore how digital signal processing could be implemented directly in hardware. We were interested in how an FFT algorithm works, because it gives an interesting way to break sound into frequency components.  We wanted to work with the whole process of using an FFT to  break down an audio clip, filtering specific selected frequencies, and applying an inverse FFT to reconstruct the clip. Thus learning how signal and music processing works when implemented in hardware. 
 
@@ -66,8 +64,8 @@ Agile-FFT-Project/
 └── README.md
 ```
 
-# Build and Run ==(Prone to change)==
----
+# Build and Run (Prone to change)
+
 ## Prerequisites
 
 - **Java 17** and **sbt** to compile the Chisel design and generate Verilog.
@@ -76,8 +74,9 @@ Agile-FFT-Project/
 - **Verilator** and a C++ compiler for tests that use native simulation. CI uses Verilator 5.044 and Clang.
 - **AMD Vivado** on the command line and a **Nexys A7-100T** board for FPGA builds and programming. Vivado is not required for Scala compilation or Verilog generation.
 
-==(Steps are generated with the help from my good friend and partner in crime, Copilot)== 
-==(Therefore, we should probably take a proper look at them at some later time)==
+(Steps are generated with the help from my good friend and partner in crime, Copilot) 
+(Therefore, we should probably take a proper look at them at some later time)
+
 The commands below are run from the `fft/` directory:
 
 ```bash
@@ -107,7 +106,7 @@ make rtl TOP=AudioTop SAMPLES=64 WIDTH=8
 
 `SAMPLES` must be a power of two and at least 2. The supplied AudioTop FPGA constraints are for an 8-bit output, so use `WIDTH=8` with those constraints.
 
-==🟡The default Makefile top is `UartTop`; select `TOP=AudioTop` explicitly for the FFT audio pipeline. `UartTop` currently uses `EmptyDsp`, not the FFT/filter/IFFT pipeline.== 
+*The default Makefile top is `UartTop`; select `TOP=AudioTop` explicitly for the FFT audio pipeline. `UartTop` currently uses `EmptyDsp`, not the FFT/filter/IFFT pipeline.* 
 **(This will change when we are done with everything?)**
 
 ### Build and program the FPGA
@@ -145,7 +144,7 @@ The plot is saved as `fft/co-simulation/fft_comparison.png`. The comparison test
 
 
 # Design and implementation
----
+
 ## Audio capture and input buffer
 
 ## PDM-to-PCM Conversion
@@ -157,7 +156,7 @@ The `PCM` module counts the ones in ten consecutive words, giving one count for 
 
 This reduction from 160 PDM bits to one PCM sample is called *decimation*. With the microphone clock running at approximately 2 MHz, it produces samples at approximately 12.5 kHz. The resulting block of PCM samples can then be passed to the FFT. 
 
-==🟡**For a more in-depth/detailed description of the different modules that make up this functionality, imagine that we have a separate readme file located near the files**==
+**(For a more in-depth/detailed description of the different modules that make up this functionality, imagine that we have a separate readme file located near the files)**
  
 ## FFT 
 *Explain how the radix-2 works as well. Maybe this should go in its own section*
@@ -167,13 +166,13 @@ This reduction from 160 PDM bits to one PCM sample is called *decimation*. With 
 ## Inverse FFT
 The **Inverse Fast Fourier Transform (IFFT)** combines these frequency components to reconstruct a sequence of time-domain samples. This produces a modified version of the original sound, reflecting the frequencies retained or removed by the frequency-domain filter. 
 
-The audio pipeline uses the `IFFTSeq` module, which receives one complex frequency valie at a time. Each value has a real and an imaginary component ==(Maybe leave out this, because it would be described earlier)==, both of which are used in the calculation. The module collects a complete block of values before processing it. This block size is configurable and must be a power of 2. 
+The audio pipeline uses the `IFFTSeq` module, which receives one complex frequency valie at a time. Each value has a real and an imaginary component (Maybe leave out this, because it would be described earlier), both of which are used in the calculation. The module collects a complete block of values before processing it. This block size is configurable and must be a power of 2. 
 
-`IFFTSeq` uses the same sequential radix-2 core ==(explain in FFT or its own section)== as the forward FFT, configured to perform the inverse transform. The core stores incoming values in bit-reversed order and 
+`IFFTSeq` uses the same sequential radix-2 core (explain in FFT or its own section) as the forward FFT, configured to perform the inverse transform. The core stores incoming values in bit-reversed order and 
 
 ## Output Buffer and Speak Interface
 
 ## Top-Level Audio Controller
 
 # Testing
----
+

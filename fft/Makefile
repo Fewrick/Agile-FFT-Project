@@ -80,7 +80,7 @@ rtl: generated/$(TOP).v
 # FPGA builds and reports
 # ============================================================
 
-.PHONY: synth-report fpga-reports fpga fpga-flash
+.PHONY: synth-report fpga-reports fpga fpga-flash fpga-flash-mac fpga-flash-linux fpga-flash-windows
 
 synth-report: generated/$(TOP).v
 	$(MAKE) -C vivado synth-report TOP="$(TOP)"
@@ -92,8 +92,18 @@ fpga-reports: generated/$(TOP).v
 fpga: generated/$(TOP).v
 	$(MAKE) -C vivado build TOP="$(TOP)"
 
-fpga-flash:
-	$(MAKE) -C vivado flash-linux
+# Program an existing bitstream; build it first with `make fpga`.
+# Preserve the existing Linux default for callers of fpga-flash.
+fpga-flash: fpga-flash-linux
+
+fpga-flash-mac:
+	$(MAKE) -C vivado flash-mac TOP="$(TOP)"
+
+fpga-flash-linux:
+	$(MAKE) -C vivado flash-linux TOP="$(TOP)"
+
+fpga-flash-windows:
+	$(MAKE) -C vivado flash-windows TOP="$(TOP)"
 
 # ============================================================
 # Cleanup
