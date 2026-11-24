@@ -17,8 +17,8 @@ class FFTDsp(override val inputDataWidth: Int, override val samples: Int) extend
     val ifft = Module(new IFFTSeq(inputDataWidth, samples))
 
     // Input and output memories
-    val memIn = SyncReadMem(samples, SInt(inputDataWidth.W))
-    val memOut = SyncReadMem(samples, SInt(inputDataWidth.W))
+    val memIn = SyncReadMem(samples, SInt(inputDataWidth.W), SyncReadMem.ReadFirst)
+    val memOut = SyncReadMem(samples, SInt(inputDataWidth.W), SyncReadMem.ReadFirst)
 
     // FSM
     object State extends ChiselEnum {

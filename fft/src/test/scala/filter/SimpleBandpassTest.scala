@@ -12,7 +12,7 @@ class SimpleBandpassTest extends AnyFlatSpec with ChiselScalatestTester {
 
   // Same mapping as in BandpassFilter: FFT index -> switch number
   def switchFor(i: Int): Int =
-    if (i < half) (i * 16) / half else ((samples - i - 1) * 16) / half
+    math.min(15, math.min(i, samples - i) * 16 / half)
 
   "BandpassFilter" should "filter frequencies based on the mask" in {
     test(new BandpassFilter(8, samples)) { dut =>
@@ -39,75 +39,8 @@ class SimpleBandpassTest extends AnyFlatSpec with ChiselScalatestTester {
 
       run(0x0000)                  // all switches off
       run(0xFFFF)                  // all switches on
+      (0 until 16).foreach(bit => run(1 << bit))
       run(Random.nextInt(65536))   // random mask
     }
   }
 }
-// package filter
-
-// import chisel3._
-// import chiseltest._
-// import org.scalatest.flatspec.AnyFlatSpec
-// import filter.BandpassFilter
-// import scala.util.Random
-
-// class SimpleBandpassTest extends AnyFlatSpec with ChiselScalatestTester {
-//   "BandpassFilter" should "filter frequencies based on the mask" in {
-//     test(new BandpassFilter(8, 32)) { dut =>
-//       // Test case 1: All switches off
-//       println("Testing with all switches off (mask 0x0000)")    
-//       dut.io.mask.poke(0.U)
-//       for (i <- 0 until 32) {
-//         println(s"Frequency index: $i")
-//         dut.io.freqIndex.poke(i.U)
-//         dut.io.in.poke((Random.nextInt(256) - 128).S) // Random input sample
-//         dut.clock.step()
-        
-//         // peek the output and check if it matches the expected behavior based on the mask
-//         val outputSample = dut.io.out.peek()
-//         println(s"Input sample: ${inputSample.litValue}, Output sample: ${outputSample.litValue}")
-
-//         dut.io.out.expect(0.S) // Expect output to be zero
-//       }
-
-//       // Test case 2: All switches on
-//       println("Testing with all switches on (mask 0xFFFF)")
-//       dut.io.mask.poke("hFFFF".U)
-//       for (i <- 0 until 32) {
-//         println(s"Frequency index: $i")
-//         val inputSample = (Random.nextInt(256) - 128).S
-//         dut.io.freqIndex.poke(i.U)
-//         dut.io.in.poke(inputSample)
-//         dut.clock.step()
-
-//         // peek the output and check if it matches the expected behavior based on the mask
-//         val outputSample = dut.io.out.peek()
-//         println(s"Input sample: ${inputSample.litValue}, Output sample: ${outputSample.litValue}")
-
-//         dut.io.out.expect(inputSample) // Expect output to match input
-//       }
-
-//       // Test case 3: Random mask
-//       val randomMask = Random.nextInt(65536).U
-//       println(s"Testing with random mask 0b${randomMask.litValue.toBinaryString}")
-//       dut.io.mask.poke(randomMask)
-//       for (i <- 0 until 32) {
-//         println(s"Frequency index: $i ")
-//         val inputSample = (Random.nextInt(256) - 128).S
-//         dut.io.freqIndex.poke(i.U)
-//         dut.io.in.poke(inputSample)
-//         dut.clock.step()
-        
-//         // peek the output and check if it matches the expected behavior based on the mask
-//         val outputSample = dut.io.out.peek()
-//         println(s"Input sample: ${inputSample.litValue}, Output sample: ${outputSample.litValue}")
-
-//         if ((randomMask.litValue & (1 << i)) != 0) {
-//           dut.io.out.expect(inputSample) // Expect output to match input if switch is on
-//         } else {
-//           dut.io.out.expect(0.S) // Expect output to be zero if switch is off
-//         }
-//       }
-//     }
-//   }
-// }

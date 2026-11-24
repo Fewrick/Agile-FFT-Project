@@ -1,6 +1,7 @@
 
-package top
+package dsp
 
+import util.SignalTestUtils.wrapSigned
 import chisel3._
 import chiseltest._
 import chiseltest.simulator.VerilatorBackendAnnotation
@@ -9,8 +10,6 @@ import org.scalatest.matchers.should.Matchers
 import cosimulation.{ComplexValue, FFTRadix2}
 
 import scala.util.Random
-import _root_.util.SignalTestUtils.wrapSigned
-import dsp.FFTDsp
 
 class FFTDspTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
   behavior of "FFTDsp"
@@ -27,7 +26,8 @@ class FFTDspTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
   def applyMask(fft: Seq[ComplexValue], mask: Int): Seq[ComplexValue] = {
     require(fft.length == samples)
     fft.zipWithIndex.map { case (bin, k) =>
-      val maskIndex = math.min(k, samples - 1 - k)
+      // Match BandpassFilter's current pairing of k with N-1-k.
+      val maskIndex = math.min(k, samples - 1 - k) * 16 / (samples / 2)
       val enabled = ((mask >> maskIndex) & 1) == 1
       if (enabled) bin else ComplexValue(0, 0)
     }

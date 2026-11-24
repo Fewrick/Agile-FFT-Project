@@ -11,8 +11,11 @@ set_property -dict { PACKAGE_PIN J5 IOSTANDARD LVCMOS33 } [get_ports {io_micClkO
 set_property -dict { PACKAGE_PIN A11 IOSTANDARD LVCMOS33 } [get_ports {io_audPwm}]
 set_property -dict { PACKAGE_PIN D12 IOSTANDARD LVCMOS33 } [get_ports {io_audSd}]
 
-# BTNU starts capture; SW[15:0] selects the FFT mask.
+# BTNU captures, BTNL processes, BTNR plays the current recording.
+# SW[15:0] is latched when processing starts.
 set_property -dict { PACKAGE_PIN M18 IOSTANDARD LVCMOS33 } [get_ports {io_start}]
+set_property -dict { PACKAGE_PIN P17 IOSTANDARD LVCMOS33 } [get_ports {io_process}]
+set_property -dict { PACKAGE_PIN M17 IOSTANDARD LVCMOS33 } [get_ports {io_output}]
 set_property -dict { PACKAGE_PIN J15 IOSTANDARD LVCMOS33 } [get_ports {io_mask[0]}]
 set_property -dict { PACKAGE_PIN L16 IOSTANDARD LVCMOS33 } [get_ports {io_mask[1]}]
 set_property -dict { PACKAGE_PIN M13 IOSTANDARD LVCMOS33 } [get_ports {io_mask[2]}]

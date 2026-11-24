@@ -18,13 +18,9 @@ class Microphone(val outputWidth: Int = 8) extends Module {
     val writeEn   = Output(Bool())
   })
 
-  // We want the signal processing (DSP) to happen for 8-bit inputs at 12kHz.
-  // In the Verilog PdmDec "blackbox", the PDM clock frequency assumed to be 2MHz and the output (dout) is 16 bit. 
-  // An approximation of the decimation can be found as:
-  // PCM sample rate = PDM clock rate / (PDM word width * decimation) 
-  //                 = (PDM clock rate / PDM word width) / decimation
-  // =>  12kHz = (2 MHz / 16) / decimation = 125 kHz / decimation  
-  // =>  decimation = 125 kHz / 12 kHz = 10
+  // PdmDes toggles every 25 system clocks: 100 MHz / 50 = 2 MHz PDM.
+  // Each PCM output accumulates 10 words of 16 bits: 12,500 Hz exactly.
+  // The divider is fixed; AudioTop enforces the matching clock/sample rate.
   val decimation = 10
   val pdm = Module(new PdmDes())
   val pcm = Module(new PCM(16, decimation, outputWidth))

@@ -4,12 +4,17 @@
 
 PYTHON ?= python
 SBT ?= sbt
+SBT_ARGS ?= -Dsamples=$(SAMPLES) -Dwidth=$(WIDTH) -DsampleRate=$(SAMPLE_RATE) -DclkFreq=$(CLK_FREQ) $(if $(RECORDING_SAMPLES),-DrecordingSamples=$(RECORDING_SAMPLES))
 
 WAVEFORM ?= sine
 PHASE ?= 0
 SEED ?= 0
 SAMPLES ?= 32
 WIDTH ?= 8
+SAMPLE_RATE ?= 12500
+CLK_FREQ ?= 100000000
+# Empty delegates frame-rounded one-second default to Scala elaboration.
+RECORDING_SAMPLES ?=
 CYCLES ?= 2
 AMPLITUDE ?= 127
 FREQUENCY ?= $(CYCLES)
@@ -67,7 +72,7 @@ FORCE:
 
 # Scala emits Verilog, FIRRTL, annotations, and black-box resources into generated/.
 generated/$(TOP).v: $(wildcard src/main/scala/*/*.scala) FORCE
-	$(SBT) -Dsamples=$(SAMPLES) -Dwidth=$(WIDTH) "runMain top.$(TOP)"
+	$(SBT) $(SBT_ARGS) "runMain top.$(TOP)"
 
 rtl: generated/$(TOP).v
 

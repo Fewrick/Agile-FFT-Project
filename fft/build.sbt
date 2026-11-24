@@ -8,7 +8,7 @@ scalacOptions ++= Seq(
 Test / parallelExecution := false
 
 // Forward JVM system properties to forked processes
-val forwardedProperties = Seq("samples", "width", "freq", "baud")
+val forwardedProperties = Seq("samples", "width", "sampleRate", "recordingSamples", "clkFreq")
 
 def forwardedJavaOptions: Seq[String] =
   forwardedProperties.flatMap { key =>
