@@ -3,6 +3,8 @@
 # ============================================================
 
 PYTHON ?= python
+SBT ?= sbt --no-client
+
 WAVEFORM ?= sine
 PHASE ?= 0
 SEED ?= 0
@@ -39,16 +41,15 @@ generate-hex-all:
 # ============================================================
 
 .PHONY: test-generated-hex
-# Discover all existing generated_hex/<samples>/*.hex inputs without regenerating them.
 test-generated-hex: generate-hex-all
-	sbt "testOnly cosimulation.GeneratedHexTest"
+	$(SBT) "testOnly cosimulation.GeneratedHexTest"
 
 .PHONY: fft-output graph
 fft-output:
 	@test "$(SAMPLES)" = 32 || (echo "FFTOutputTest requires SAMPLES=32"; exit 1)
 	$(MAKE) generate-hex
 	FFT_INPUT="$(CURDIR)/co-simulation/generated_hex/$(SAMPLES)/$(WAVEFORM).hex" FFT_PYTHON="$(PYTHON)" \
-		sbt "testOnly cosimulation.FFTOutputTest"
+		$(SBT) "testOnly cosimulation.FFTOutputTest"
 
 graph:
 	MPLCONFIGDIR=/tmp/fft-matplotlib MPLBACKEND=Agg \
@@ -60,23 +61,27 @@ graph:
 # RTL generation
 # ============================================================
 
-# Scala emits Verilog, FIRRTL, annotations, and black-box resources into generated/.
-generated/$(TOP).v: $(wildcard src/main/scala/*/*.scala)
-	sbt -Dsamples=$(SAMPLES) -Dwidth=$(WIDTH) "runMain top.$(TOP)"
+.PHONY: rtl FORCE
 
-.PHONY: rtl
+FORCE:
+
+# Scala emits Verilog, FIRRTL, annotations, and black-box resources into generated/.
+generated/$(TOP).v: $(wildcard src/main/scala/*/*.scala) FORCE
+	$(SBT) -Dsamples=$(SAMPLES) -Dwidth=$(WIDTH) "runMain top.$(TOP)"
+
 rtl: generated/$(TOP).v
 
 # ============================================================
 # FPGA builds and reports
 # ============================================================
 
-.PHONY: synth-report fpga-reports fpga fpga_flash
+.PHONY: synth-report fpga-reports fpga fpga-flash
+
 synth-report: generated/$(TOP).v
 	$(MAKE) -C vivado synth-report TOP="$(TOP)"
 
 fpga-reports: generated/$(TOP).v
-	$(MAKE) -C viv ado build TOP="$(TOP)"
+	$(MAKE) -C vivado build TOP="$(TOP)"
 	$(MAKE) -C vivado reports
 
 fpga: generated/$(TOP).v
@@ -92,11 +97,10 @@ fpga-flash:
 .PHONY: clean
 clean:
 	rm -rf test_run_dir
-	# Generated inputs are retained to preserve manually supplied regression vectors.
 	rm -f co-simulation/fft_comparison.png
 	rm -f co-simulation/comparison_metrics.json
 	rm -rf co-simulation/__pycache__/
 	rm -rf co-simulation/generated_hex
 	rm -rf co-simulation/output_hex
 	rm -rf generated
-	cd vivado && make clean
+	$(MAKE) -C vivado clean
