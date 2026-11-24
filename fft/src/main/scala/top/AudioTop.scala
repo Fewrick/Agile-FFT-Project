@@ -8,7 +8,7 @@ import audioIO.{Microphone, Speaker}
 import buffer.{FrameLoader, FrameStore}
 import dsp.FFTDsp
 
-class AudioTop(val samples: Int, val width: Int, val sampleRate: Int, val recordingSamples: Int, val clkFreq: Int = 100000000) extends Module {
+class AudioTop(val samples: Int, val width: Int, val sampleRate: Int, val recordingSamples: Int, val clkFreq: Int = 100000000, val bands: Int) extends Module {
   require(samples >= 2 && isPow2(samples))
   require(width == 8, "Microphone PCM currently supports eight-bit samples only")
   require(clkFreq == 100000000 && sampleRate == 12500,
@@ -26,7 +26,7 @@ class AudioTop(val samples: Int, val width: Int, val sampleRate: Int, val record
     val start     = Input(Bool()) // Capture a new recording
     val process   = Input(Bool()) // FFT -> mask -> IFFT, in place
     val output    = Input(Bool()) // Play the current recording
-    val mask      = Input(UInt(16.W))
+    val mask      = Input(UInt(bands.W))
     val streamOut = Output(UInt(width.W))
     val micClkOut = Output(Bool())
     val audPwm    = Output(Bool())
@@ -43,7 +43,7 @@ class AudioTop(val samples: Int, val width: Int, val sampleRate: Int, val record
 
   // Module instantiations
   val mic = Module(new Microphone(width))
-  val dsp = Module(new FFTDsp(width, samples))
+  val dsp = Module(new FFTDsp(width, samples, bands))
   val loader = Module(new FrameLoader(width, samples, recordingSamples))
   val store = Module(new FrameStore(width, samples, recordingSamples))
   val speaker = Module(new Speaker(width, recordingSamples, sampleRate, clkFreq))
@@ -149,7 +149,7 @@ class AudioTop(val samples: Int, val width: Int, val sampleRate: Int, val record
 
   // DSP input interface.
   dsp.io.start := state === Launch
-  dsp.io.mask  := RegEnable(io.mask, 0.U(16.W), acceptProcess)
+  dsp.io.mask  := RegEnable(io.mask, 0.U(bands.W), acceptProcess)
 
   // DSP -> output register boundary.
   io.streamOut := RegEnable(store.io.writeData.asUInt, 0.U(width.W), store.io.writeEn)
@@ -237,5 +237,6 @@ object AudioTop extends App {
   val sampleRate = sys.props.get("sampleRate").map(_.toInt).getOrElse(12500)
   val recordingSamples = sys.props.get("recordingSamples").map(_.toInt).getOrElse(((sampleRate + samples - 1) / samples) * samples)
   val clkFreq = sys.props.get("clkFreq").map(_.toInt).getOrElse(100000000)
-  emitVerilog(new AudioTop(samples, width, sampleRate, recordingSamples, clkFreq), Array("--target-dir", "generated"))
+  val bands = sys.props.get("bands").map(_.toInt).getOrElse(16)
+  emitVerilog(new AudioTop(samples, width, sampleRate, recordingSamples, clkFreq, bands), Array("--target-dir", "generated"))
 }

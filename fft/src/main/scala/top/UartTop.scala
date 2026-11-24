@@ -81,5 +81,5 @@ class UartTop(val freq : Int, val baud : Int, val samples : Int, val width : Int
 object UartTop extends App {
   val samples = sys.props.get("samples").map(_.toInt).getOrElse(32)
   val width = sys.props.get("width").map(_.toInt).getOrElse(8)
-  emitVerilog(new UartTop(100000000, 115200, samples, width), Array("--target-dir", "generated"))
+  emitVerilog(new UartTop(100000000, 1000000, samples, width), Array("--target-dir", "generated"))
 }

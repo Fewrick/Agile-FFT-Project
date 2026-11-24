@@ -6,7 +6,7 @@ import chisel3.util._
 import fft.FFTSeq
 import interfaces.ComplexSample
 
-class FFTOnly(override val inputDataWidth: Int, override val samples: Int) extends DspTop(inputDataWidth, samples, new ComplexSample(inputDataWidth + log2Ceil(samples))) {
+class FFTOnly(override val inputDataWidth: Int, override val samples: Int) extends DspTop(inputDataWidth, samples, new ComplexSample(inputDataWidth + log2Ceil(samples)), 0) {
     require(samples >= 2 && isPow2(samples))
 
     val addrWidth = log2Ceil(samples)

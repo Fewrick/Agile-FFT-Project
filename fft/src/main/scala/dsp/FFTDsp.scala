@@ -6,14 +6,14 @@ import chisel3.util._
 import fft.{FFTSeq, IFFTSeq}
 import filter.BandpassFilter
 
-class FFTDsp(override val inputDataWidth: Int, override val samples: Int) extends DspTop(inputDataWidth, samples, SInt(inputDataWidth.W)) {
+class FFTDsp(override val inputDataWidth: Int, override val samples: Int, override val bands: Int) extends DspTop(inputDataWidth, samples, SInt(inputDataWidth.W), bands) {
     require(samples >= 2 && isPow2(samples))
 
     val fftWidth = inputDataWidth + log2Ceil(samples)
 
     // Processing modules
     val fft = Module(new FFTSeq(inputDataWidth, samples))
-    val filter = Module(new BandpassFilter(fftWidth, samples))
+    val filter = Module(new BandpassFilter(fftWidth, samples, bands))
     val ifft = Module(new IFFTSeq(inputDataWidth, samples))
 
     // Input and output memories

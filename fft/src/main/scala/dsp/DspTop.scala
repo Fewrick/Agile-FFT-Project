@@ -3,7 +3,7 @@ package dsp
 import chisel3._
 import chisel3.util._
 
-abstract class DspTop[T <: Data](val inputDataWidth : Int, val samples : Int, outputGen: T) extends Module {
+abstract class DspTop[T <: Data](val inputDataWidth : Int, val samples : Int, outputGen: T, val bands: Int) extends Module {
   require(inputDataWidth > 0)
   require((samples >= 2) & ((samples & (samples - 1)) == 0))
 
@@ -13,7 +13,7 @@ abstract class DspTop[T <: Data](val inputDataWidth : Int, val samples : Int, ou
 
   val io = IO(new Bundle {
     // Input Mask
-    val mask = Input(UInt(16.W))
+    val mask = Input(UInt(bands.W))
 
     // Input Memory
     val writeData = Input(SInt(inputDataWidth.W))
