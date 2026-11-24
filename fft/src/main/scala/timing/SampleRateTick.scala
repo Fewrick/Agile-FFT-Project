@@ -8,7 +8,7 @@ class SampleRateTick(val sampleRate: Int, val clkFreq: Int) extends Module {
   require(sampleRate > 0 && clkFreq >= sampleRate)
 
   val io = IO(new Bundle {
-    val start = Input(Bool())
+    val enable = Input(Bool())
     val tick = Output(Bool())
   })
 
@@ -19,12 +19,12 @@ class SampleRateTick(val sampleRate: Int, val clkFreq: Int) extends Module {
   val cnt = RegInit(0.U(cntWidth.W))
   val wrap = cnt === (period - 1).U
 
-  when(!io.start || wrap) {
+  when(!io.enable || wrap) {
     cnt := 0.U
   }.otherwise {
     cnt := cnt + 1.U
   }
 
   // Generate a tick only when enabled and the period has elapsed.
-  io.tick := io.start && wrap
+  io.tick := io.enable && wrap
 }
