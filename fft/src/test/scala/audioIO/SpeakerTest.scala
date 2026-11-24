@@ -8,7 +8,7 @@ class SpeakerTest extends AnyFlatSpec with ChiselScalatestTester {
   behavior.of("Nexys A7 Speaker Path")
 
   "Speaker Test" should "assert audSd and vary PWM duty cycle with sample values" in {
-    test(new NexysPWMSpeaker(width = 8)) { s =>
+    test(new PWMSpeaker(width = 8)) { s =>
       assert(s.io.audioEn.peek().litToBoolean == true)
 
       def measureHighCycles(sampleVal: Int): Int = {
