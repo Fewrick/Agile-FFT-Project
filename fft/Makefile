@@ -3,7 +3,7 @@
 # ============================================================
 
 PYTHON ?= python
-SBT ?= sbt --no-client
+SBT ?= sbt
 
 WAVEFORM ?= sine
 PHASE ?= 0
