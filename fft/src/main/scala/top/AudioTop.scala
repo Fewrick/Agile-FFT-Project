@@ -58,7 +58,7 @@ class AudioTop(val samples: Int = 32) extends Module {
   io.streamOut := RegNext(dsp.io.readData.asUInt, 0.U(inputDataWidth.W))
 
   // Speaker
-  val speaker = Module(new NexysPWMSpeaker(inputDataWidth))
+  val speaker = Module(new PWMSpeaker(inputDataWidth))
   val latchedSample = RegInit(0.U(inputDataWidth.W))
 
   // If dsp.io.readData is signed (-128 to 127), offset by +128 so silence/center is 128
