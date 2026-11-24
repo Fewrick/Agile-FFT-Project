@@ -33,7 +33,8 @@ set_property -dict { PACKAGE_PIN U12 IOSTANDARD LVCMOS33 } [get_ports {io_mask[1
 set_property -dict { PACKAGE_PIN U11 IOSTANDARD LVCMOS33 } [get_ports {io_mask[14]}]
 set_property -dict { PACKAGE_PIN V10 IOSTANDARD LVCMOS33 } [get_ports {io_mask[15]}]
 
-# LED[7:0] displays the output sample bits.
+# LED0: recording stored; LED1: DSP processing finished; LED2: playback active.
+# LED[7:3] are off.
 set_property -dict { PACKAGE_PIN H17 IOSTANDARD LVCMOS33 } [get_ports {io_streamOut[0]}]
 set_property -dict { PACKAGE_PIN K15 IOSTANDARD LVCMOS33 } [get_ports {io_streamOut[1]}]
 set_property -dict { PACKAGE_PIN J13 IOSTANDARD LVCMOS33 } [get_ports {io_streamOut[2]}]
