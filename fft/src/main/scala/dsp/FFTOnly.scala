@@ -1,12 +1,10 @@
 
-package top
+package dsp
 
 import chisel3._
 import chisel3.util._
-
-import fft.{FFTSeq, IFFTSeq}
+import fft.FFTSeq
 import interfaces.ComplexSample
-import filter.BandpassFilter
 
 class FFTOnly(override val inputDataWidth: Int, override val samples: Int) extends DspTop(inputDataWidth, samples, new ComplexSample(inputDataWidth + log2Ceil(samples))) {
     require(samples >= 2 && isPow2(samples))

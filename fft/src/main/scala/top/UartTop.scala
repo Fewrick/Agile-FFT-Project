@@ -3,6 +3,7 @@ package top
 import chisel3._
 import chisel3.util._
 import chisel.lib.uart._
+import dsp.EmptyDsp
 
 class UartTop(val freq : Int, val baud : Int, val samples : Int, val width : Int = 8) extends Module {
   val io = IO(new Bundle {

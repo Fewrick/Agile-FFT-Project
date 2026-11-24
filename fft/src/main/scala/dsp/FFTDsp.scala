@@ -1,11 +1,9 @@
 
-package top
+package dsp
 
 import chisel3._
 import chisel3.util._
-
 import fft.{FFTSeq, IFFTSeq}
-import interfaces.ComplexSample
 import filter.BandpassFilter
 
 class FFTDsp(override val inputDataWidth: Int, override val samples: Int) extends DspTop(inputDataWidth, samples, SInt(inputDataWidth.W)) {

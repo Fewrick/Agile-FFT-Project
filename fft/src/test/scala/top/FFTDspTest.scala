@@ -4,13 +4,13 @@ package top
 import chisel3._
 import chiseltest._
 import chiseltest.simulator.VerilatorBackendAnnotation
-
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
+import cosimulation.{ComplexValue, FFTRadix2}
 
-import cosimulation.{FFTRadix2, ComplexValue}
 import scala.util.Random
 import _root_.util.SignalTestUtils.wrapSigned
+import dsp.FFTDsp
 
 class FFTDspTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
   behavior of "FFTDsp"
