@@ -2,8 +2,7 @@ package top
 
 import chisel3._
 import chisel3.util._
-import audioIO.Microphone
-import audioIO.PWMSpeaker
+import audioIO.{Microphone, PWMSpeaker}
 import dsp.FFTDsp
 
 class AudioTop(val samples: Int, val width : Int = 8) extends Module {
