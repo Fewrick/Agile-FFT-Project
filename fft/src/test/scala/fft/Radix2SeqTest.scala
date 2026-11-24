@@ -1,127 +1,134 @@
 package fft
 
-import chisel3._
 import chisel3.util._
 import chiseltest._
 import cosimulation.ComplexValue
-import interfaces._
+import _root_.util.{SeqTransformHarness, SeqTransformTestUtils}
 import org.scalatest.flatspec.AnyFlatSpec
 
-// Exercise the public wrappers through one full-width complex test interface.
-class SeqTransformHarness(width: Int, samples: Int, inverse: Boolean) extends Module {
-  val fullWidth = width + log2Ceil(samples)
-  val io = IO(new Bundle {
-    val in = Flipped(new DSPIO(new ComplexSample(fullWidth)))
-    val out = new DSPIO(new ComplexSample(fullWidth))
-  })
-  if (inverse) {
-    val engine = Module(new IFFTSeq(width, samples))
-    engine.io.in <> io.in
-    io.out.data.re := engine.io.out.data.re
-    io.out.data.im := engine.io.out.data.im
-    io.out.valid := engine.io.out.valid
-    engine.io.out.ready := io.out.ready
-  } else {
-    val engine = Module(new FFTSeq(width, samples))
-    engine.io.in.data := io.in.data.re(width - 1, 0).asSInt
-    engine.io.in.valid := io.in.valid
-    io.in.ready := engine.io.in.ready
-    io.out <> engine.io.out
-  }
-}
-
 class Radix2SeqTest extends AnyFlatSpec with ChiselScalatestTester {
-  private def wrap(value: Long, width: Int): Int = {
-    val modulus = 1L << width
-    val bits = value & (modulus - 1)
-    (if (bits >= modulus / 2) bits - modulus else bits).toInt
-  }
-
-  // Recursive reference models each stage's original wrap and signed division.
-  private def reference(input: Seq[ComplexValue], width: Int, inverse: Boolean): Seq[ComplexValue] = {
-    val fullWidth = width + log2Ceil(input.size)
-    def transform(x: Seq[ComplexValue]): Seq[ComplexValue] = {
-      if (x.size == 1) x
-      else {
-        val even = transform(x.indices.collect { case i if i % 2 == 0 => x(i) })
-        val odd = transform(x.indices.collect { case i if i % 2 == 1 => x(i) })
-        val resultWidth = if (inverse) fullWidth else width + log2Ceil(x.size)
-        def finish(value: Long): Int = wrap(if (inverse) value / 2 else value, resultWidth)
-        val pairs = (0 until x.size / 2).map { k =>
-          val angle = 2 * math.Pi * k / x.size
-          val cos = math.round(math.cos(angle) * 127)
-          val sine = if (inverse) math.sin(angle) else -math.sin(angle)
-          val sin = math.round(sine * 127)
-          val re = (odd(k).re * cos - odd(k).im * sin) / 127
-          val im = (odd(k).im * cos + odd(k).re * sin) / 127
-          (ComplexValue(finish(even(k).re + re), finish(even(k).im + im)),
-           ComplexValue(finish(even(k).re - re), finish(even(k).im - im)))
+  "Radix2Seq memory" should "contain exactly two half-depth complex banks with one read and write each" in {
+    for (samples <- Seq(2, 4, 32, 64, 128)) {
+      val rtl = (new chisel3.stage.ChiselStage).emitChirrtl(new Radix2Seq(8, samples, false),
+        Array("--target-dir", s"test_run_dir/parity_memory_$samples"))
+      val memories = "(?m)^\\s*smem .*".r.findAllIn(rtl).toSeq
+      assert(memories.size == 2)
+      for (bank <- Seq("bank0", "bank1")) {
+        val declaration = memories.find(_.contains(s"smem $bank :")).get
+        assert(declaration.contains(s"re : SInt<${8 + log2Ceil(samples)}>") &&
+          declaration.contains(s"im : SInt<${8 + log2Ceil(samples)}>"))
+        assert(declaration.contains(s"[${samples / 2}]"))
+        for (access <- Seq("read", "write")) {
+          val ports = s"$access mport [^=]+ = $bank\\[".r.findAllIn(rtl).size
+          assert(ports == 1, s"$bank has $ports $access ports")
         }
-        pairs.map(_._1) ++ pairs.map(_._2)
       }
     }
-    transform(input).map(v => if (inverse) ComplexValue(wrap(v.re, width), wrap(v.im, width)) else v)
   }
 
-  for (inverse <- Seq(false, true); samples <- Seq(2, 4, 32); width <- Seq(3, 8)) {
+  "Parity banking" should "map each address uniquely and keep every stage conflict-free" in {
+    for (samples <- Seq(2, 4, 8, 16, 32, 64, 128, 256, 1024)) {
+      def location(address: Int): (Int, Int) =
+        (Integer.bitCount(address) & 1, address >> 1)
+      val locations = (0 until samples).map(location)
+      assert(locations.distinct.size == samples)
+      for (bank <- 0 until 2) {
+        assert(locations.filter(_._1 == bank).map(_._2).sorted == (0 until samples / 2))
+      }
+      for (stage <- 0 until log2Ceil(samples)) {
+        val half = 1 << stage
+        val pairs = (0 until samples / 2).map { index =>
+          val low = index & (half - 1)
+          val a = ((index & ~(half - 1)) << 1) | low
+          (a, a ^ half)
+        }
+        // A stage is a partition: pending writes cannot alias later reads.
+        assert(pairs.flatMap { case (a, b) => Seq(a, b) }.sorted == (0 until samples))
+        for ((a, b) <- pairs) assert(location(a)._1 != location(b)._1)
+      }
+    }
+  }
+
+  for (inverse <- Seq(false, true); samples <- Seq(2, 4, 32, 64, 128)) {
+    val width = 8
     val direction = if (inverse) "IFFTSeq" else "FFTSeq"
-    direction should s"match exact wrapped results at width $width, size $samples, with stalls and repeated frames" in {
+    direction should s"match exact wrapped results at width $width, samples $samples, with stalls and repeated frames" in {
       test(new SeqTransformHarness(width, samples, inverse)) { dut =>
         val random = new scala.util.Random(42)
         val dataWidth = width + (if (inverse) log2Ceil(samples) else 0)
         val limit = 1 << (dataWidth - 1)
-        val frames = Seq(
-          Seq.tabulate(samples)(i => ComplexValue(if (i % 2 == 0) -limit else limit - 1,
-            if (inverse) (if (i % 3 == 0) -limit else limit - 1) else 0)),
-          Seq.fill(samples)(ComplexValue(random.nextInt(2 * limit) - limit,
-            if (inverse) random.nextInt(2 * limit) - limit else 0)),
-          Seq.tabulate(samples)(i => ComplexValue(if (i == 0) -1 else 0, if (inverse && i == 1) -3 else 0)))
+
+        val frames = {
+          val basicFrames = Seq(
+            // Alternating extremes
+            Seq.tabulate(samples)(i =>
+              ComplexValue(
+                if (i % 2 == 0) -limit else limit - 1,
+                if (inverse) (if (i % 3 == 0) -limit else limit - 1) else 0
+              )
+            ),
+
+            // Random full-range input
+            Seq.fill(samples)(
+              ComplexValue(
+                random.nextInt(2 * limit) - limit,
+                if (inverse) random.nextInt(2 * limit) - limit else 0
+              )
+            ),
+
+            // Negative impulse
+            Seq.tabulate(samples)(i =>
+              ComplexValue(
+                if (i == 0) -1 else 0,
+                if (inverse && i == 1) -3 else 0
+              )
+            )
+          )
+
+          val additionalFrames = {
+            val amplitude = if (inverse) 16 else math.min(16, limit - 1)
+
+            Seq(
+              // All zeros
+              Seq.fill(samples)(ComplexValue(0, 0)),
+
+              // Constant signal
+              Seq.fill(samples)(ComplexValue(amplitude, 0)),
+
+              // Positive impulse
+              Seq.tabulate(samples)(i => ComplexValue(if (i == 0) amplitude else 0, 0)),
+
+              // Impulse in the middle
+              Seq.tabulate(samples)(i => ComplexValue(if (i == samples / 2) amplitude else 0, 0)),
+
+              // Alternating signs
+              Seq.tabulate(samples)(i => ComplexValue(if (i % 2 == 0) amplitude else -amplitude, 0)),
+
+              // Single-frequency cosine
+              Seq.tabulate(samples)(i => ComplexValue(math.round(amplitude * math.cos(2 * math.Pi * 3 * i / samples)).toInt, 0)),
+
+              // Single-frequency sine
+              Seq.tabulate(samples)(i => ComplexValue(math.round(amplitude * math.sin(2 * math.Pi * 5 * i / samples)).toInt, 0)),
+
+              // Multiple frequencies
+              Seq.tabulate(samples)(i => ComplexValue(math.round((amplitude / 2.0) * (math.sin(2 * math.Pi * 2 * i / samples) + math.cos(2 * math.Pi * 7 * i / samples))).toInt, 0)),
+
+              // Random low-amplitude input
+              Seq.fill(samples)(ComplexValue(random.nextInt(2 * amplitude + 1) - amplitude,
+                  if (inverse) random.nextInt(2 * amplitude + 1) - amplitude else 0)
+              )
+            )
+          }
+
+          basicFrames ++ additionalFrames
+        }
 
         for ((input, frame) <- frames.zipWithIndex) {
-          var cycles = 0
-          def step(): Unit = { dut.clock.step(); cycles += 1 }
-          dut.io.out.ready.poke(true.B)
-          for ((value, i) <- input.zipWithIndex) {
-            if (frame == 1 && i % 3 == 0) {
-              dut.io.in.valid.poke(false.B)
-              dut.io.in.ready.expect(true.B)
-              step()
-            }
-            dut.io.in.valid.poke(true.B)
-            dut.io.in.data.re.poke(value.re.S)
-            dut.io.in.data.im.poke(value.im.S)
-            dut.io.in.ready.expect(true.B)
-            step()
-          }
-          dut.io.in.valid.poke(false.B)
-          val expected = reference(input, width, inverse)
-          for ((value, i) <- expected.zipWithIndex) {
-            while (!dut.io.out.valid.peek().litToBoolean && cycles < 1000) {
-              dut.io.in.ready.expect(false.B)
-              step()
-            }
-            dut.io.out.valid.expect(true.B)
-            dut.io.in.ready.expect(false.B)
-            dut.io.out.data.re.expect(value.re.S)
-            dut.io.out.data.im.expect(value.im.S)
-            if (frame == 1) {
-              dut.io.out.ready.poke(false.B)
-              for (_ <- 0 until (i % 3 + 1)) {
-                step()
-                dut.io.out.valid.expect(true.B)
-                dut.io.in.ready.expect(false.B)
-                dut.io.out.data.re.expect(value.re.S)
-                dut.io.out.data.im.expect(value.im.S)
-              }
-              dut.io.out.ready.poke(true.B)
-            }
-            step()
-          }
-          dut.io.out.valid.expect(false.B)
-          dut.io.in.ready.expect(true.B)
-          if (frame != 1) {
-            assert(cycles == 2 * samples + log2Ceil(samples) * (samples / 2 + 5))
-            if (samples == 32) assert(cycles == 169)
+          withClue(s"$direction, samples=$samples, frame=$frame: ") {
+            SeqTransformTestUtils.checkFrame(dut, input, width, samples, inverse,
+              useStalls = frame % 2 == 1)
+            if (frame == 0) info(s"$direction: $samples samples, unstalled frame verified at " +
+              s"${SeqTransformTestUtils.frameCycles(samples)} cycles")
           }
         }
       }

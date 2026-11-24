@@ -3,12 +3,7 @@ namespace eval synth_report {}
 proc synth_report::run {} {
     set top        [cfg::require TOP]
     set part       [cfg::require PART]
-    set rtl_dir    [file normalize [cfg::require RTL_DIR]]
     set build_dir  [file normalize [cfg::require BUILD_DIR]]
-    set hdl        [cfg::hdl_language]
-    set hdl_exts   [cfg::hdl_extensions]
-    set vhdl_std   [cfg::require VHDL_STD]
-
     set report_dir [file join $build_dir reports]
 
     puts "============================================================"
@@ -16,25 +11,10 @@ proc synth_report::run {} {
     puts "============================================================"
     puts "Top:       $top"
     puts "Part:      $part"
-    puts "RTL dir:   $rtl_dir"
     puts "Report dir:$report_dir"
 
-    # --------------------------------------------------------
-    # Load RTL
-    # --------------------------------------------------------
-
-    set rtl_files [util::find_files $rtl_dir $hdl_exts]
-
-    if {[llength $rtl_files] == 0} {
-        error "No $hdl RTL files found in $rtl_dir"
-    }
-
-    read_verilog $rtl_files
-    
-
-    # --------------------------------------------------------
-    # Synthesis
-    # --------------------------------------------------------
+    # Use the same sources, selected top, and XDC as the bitstream flow.
+    project::create
 
     synth_design -top $top -part $part
 

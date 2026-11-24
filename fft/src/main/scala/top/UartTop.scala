@@ -4,11 +4,15 @@ import chisel3._
 import chisel3.util._
 import chisel.lib.uart._
 
-class UartTop(val freq : Int, val baud : Int, val samples : Int = 32, val width : Int = 8) extends Module {
+class UartTop(val freq : Int, val baud : Int, val samples : Int, val width : Int = 8) extends Module {
   val io = IO(new Bundle {
     val rx = Input(Bool())
     val tx = Output(Bool())
+    val mask = Input(UInt(16.W))
   })
+
+  // Debug print for the parameters
+  println(s"UartTop: freq = $freq, baud = $baud, samples = $samples, width = $width")
 
   val tx = Module(new Tx(freq, baud))
   io.tx := tx.io.txd
@@ -26,7 +30,7 @@ class UartTop(val freq : Int, val baud : Int, val samples : Int = 32, val width 
   dspTop.io.start := false.B
   dspTop.io.readAddr := DontCare
   dspTop.io.readEn := DontCare
-  dspTop.io.mask := Fill(16, 1.U)
+  dspTop.io.mask := io.mask
 
   object State extends ChiselEnum {
     val write, run, read = Value
@@ -74,5 +78,7 @@ class UartTop(val freq : Int, val baud : Int, val samples : Int = 32, val width 
 }
 
 object UartTop extends App {
-  emitVerilog(new UartTop(100000000, 115200))
+  val samples = sys.props.get("samples").map(_.toInt).getOrElse(32)
+  val width = sys.props.get("width").map(_.toInt).getOrElse(8)
+  emitVerilog(new UartTop(100000000, 115200, samples, width), Array("--target-dir", "generated"))
 }

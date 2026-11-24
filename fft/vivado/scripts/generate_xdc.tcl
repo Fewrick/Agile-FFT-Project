@@ -46,7 +46,7 @@ proc pins::read_mapping {mapping_file} {
 }
 
 proc pins::generate {} {
-    set xdc_dir [file normalize [cfg::require XDC_DIR]]
+    set xdc_dir [project::constraints_dir]
 
     set mapping_file [file join $::flow_root_dir pins.txt]
     set output_file  [file join $xdc_dir pins.xdc]

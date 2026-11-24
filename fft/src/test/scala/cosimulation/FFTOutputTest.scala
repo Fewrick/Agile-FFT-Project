@@ -3,59 +3,42 @@ package cosimulation
 
 import chisel3._
 import chiseltest._
-import chiseltest.simulator.VerilatorBackendAnnotation
 import fft.{DFT, FFTComb}
 import org.scalatest.flatspec.AnyFlatSpec
 
-import java.nio.file.{Files, Path, Paths}
-import scala.io.Source
+import java.nio.file.{Files, Path}
+import _root_.util.{SimulatorTestUtils, TestFiles}
+import _root_.util.TestFiles.{writeFloat, writeHex}
+import scala.sys.process._
 
 class FFTOutputTest extends AnyFlatSpec with ChiselScalatestTester {
 
   behavior of "FFT output generation"
 
-  private val outputDir = Paths.get("co-simulation")
-  private val inputPath = Paths.get(sys.env.getOrElse("FFT_INPUT", outputDir.resolve("sine.hex").toString))
+  private val projectRoot = TestFiles.projectRoot
+  private val coSimulationDir = projectRoot.resolve("co-simulation")
+  private val outputDir = projectRoot.resolve("co-simulation/output_hex")
+  private val defaultInput = coSimulationDir.resolve("generated_hex/32/sine.hex")
+  private val inputPath = sys.env.get("FFT_INPUT")
+    .map(value => projectRoot.resolve(value).normalize()).getOrElse(defaultInput)
 
-  private val simulator = sys.env.get("FFT_SIMULATOR") match {
-    case Some("verilator") => Seq(VerilatorBackendAnnotation)
-    case None | Some("treadle") => Seq.empty
-    case Some(other) =>
-      throw new IllegalArgumentException(s"Unknown FFT_SIMULATOR: $other")
-  }
+  private val simulator = SimulatorTestUtils.annotations
 
   private def readInput(path: Path): Seq[Int] = {
-    val source = Source.fromFile(path.toFile)
-    try {
-      source.getLines().map(_.trim).filter(_.nonEmpty).map { line =>
-        val raw = Integer.parseInt(line, 16)
-        require(raw >= 0 && raw < 256, "Expected 8-bit HEX input")
-        if (raw >= 128) raw - 256 else raw
-      }.toVector
-    } finally {
-      source.close()
+    if (!Files.isRegularFile(path) && !sys.env.contains("FFT_INPUT")) {
+      val python = sys.env.getOrElse("FFT_PYTHON", "python")
+      val status = Process(Seq(python, coSimulationDir.resolve("generate_hex.py").toString,
+        "--waveform", "sine", "--samples", "32"), projectRoot.toFile).!
+      require(status == 0, s"Waveform generation failed ($status); run make sine or set FFT_PYTHON")
     }
-  }
-
-  private def writeHex(path: Path, values: Seq[Int], bits: Int): Unit = {
-    val digits = (bits + 3) / 4
-    val mask = (1L << bits) - 1
-
-    val lines = values.map { value => ("%0" + digits + "X").format(value.toLong & mask) }
-
-    Files.write(path, (lines.mkString("\n") + "\n").getBytes("UTF-8"))
-  }
-
-  private def writeFloat(path: Path, values: Seq[Double]): Unit = {
-    val lines = values.map(_.toString)
-    Files.write(path, (lines.mkString("\n") + "\n").getBytes("UTF-8"))
+    TestFiles.readSigned8(path, 32)
   }
 
   it should "export FFT results from all implementations" in {
     Files.createDirectories(outputDir)
 
     val input = readInput(inputPath)
-    require(input.length == 32, "Expected 32 input samples")
+    require(input.length == 32, s"$inputPath: expected 32 input samples, got ${input.length}")
 
     // Scala floating-point FFT
     val (fp) = FFTFP.fft(input.map(_.toDouble))

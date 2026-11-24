@@ -1,6 +1,7 @@
 package fft
 
 import chisel3._
+import chisel3.experimental.{annotate, ChiselAnnotation}
 import chisel3.util._
 import interfaces._
 import arithmetic._
@@ -28,7 +29,42 @@ class Radix2Seq(val baseWidth: Int, val samples: Int, val inverse: Boolean) exte
     // Working memory
     // -------------------------
 
-    val buffer = Reg(Vec(samples, new ComplexSample(workingWidth)))
+    // P=1 parity banking: flipping any one logical address bit changes bank.
+    // For future P=2^p routing: bank=(parity(a >> p) << p) | lowBits(a,p),
+    // row=a >> (p+1). Keep routing separate from the butterfly arithmetic.
+    def bank(address: UInt): Bool = address.xorR
+    def row(address: UInt): UInt =
+        if (samples == 2) 0.U(1.W) else address(addrWidth - 1, 1)
+
+    // ReadFirst makes FIRRTL emit a registered data output, which Vivado can
+    // map to BRAM. Correctness still forbids same-row read/write collisions.
+    val bank0 = SyncReadMem(samples / 2, new ComplexSample(workingWidth), SyncReadMem.ReadFirst)
+    val bank1 = SyncReadMem(samples / 2, new ComplexSample(workingWidth), SyncReadMem.ReadFirst)
+    // Vivado otherwise chooses distributed RAM for these shallow banks.
+    Seq(bank0, bank1).foreach { memory =>
+        annotate(new ChiselAnnotation {
+            override def toFirrtl =
+                firrtl.AttributeAnnotation(memory.toTarget, "ram_style = \"block\"")
+        })
+    }
+    val rowWidth = (addrWidth - 1) max 1
+    val readEnable = WireDefault(VecInit(Seq.fill(2)(false.B)))
+    val readRow = WireDefault(VecInit(Seq.fill(2)(0.U(rowWidth.W))))
+    val writeEnable = WireDefault(VecInit(Seq.fill(2)(false.B)))
+    val writeRow = WireDefault(VecInit(Seq.fill(2)(0.U(rowWidth.W))))
+    val writeData = Wire(Vec(2, new ComplexSample(workingWidth)))
+    writeData.foreach(_ := 0.U.asTypeOf(new ComplexSample(workingWidth)))
+
+    // Exactly one read accessor and one whole-complex-word write per bank.
+    val readData = VecInit(Seq(bank0.read(readRow(0), readEnable(0)),
+                               bank1.read(readRow(1), readEnable(1))))
+    when(writeEnable(0)) { bank0.write(writeRow(0), writeData(0)) }
+    when(writeEnable(1)) { bank1.write(writeRow(1), writeData(1)) }
+    for (b <- 0 until 2) {
+        when(readEnable(b) && writeEnable(b)) {
+            assert(readRow(b) =/= writeRow(b), "undefined memory read/write collision")
+        }
+    }
 
     // -------------------------
     // FSM
@@ -59,7 +95,6 @@ class Radix2Seq(val baseWidth: Int, val samples: Int, val inverse: Boolean) exte
     io.in.ready := state === LOAD
 
     io.out.valid := state === OUTPUT
-    io.out.data := buffer(outputIndex)
 
     // -------------------------
     // Input loading
@@ -70,7 +105,9 @@ class Radix2Seq(val baseWidth: Int, val samples: Int, val inverse: Boolean) exte
         // DIT FFT requires bit-reversed input ordering
         val address = Reverse(inputIndex)
 
-        buffer(address) := io.in.data
+        writeEnable(bank(address)) := true.B
+        writeRow(bank(address)) := row(address)
+        writeData(bank(address)) := io.in.data
 
         when(inputIndex === lastIndex) {
             stage := 0.U
@@ -118,17 +155,29 @@ class Radix2Seq(val baseWidth: Int, val samples: Int, val inverse: Boolean) exte
     val tag = Wire(new Bundle {
         val addrA = UInt(addrWidth.W)
         val addrB = UInt(addrWidth.W)
+        val bankA = Bool()
+        val stage = UInt(log2Ceil(stages max 2).W)
         val last = Bool()
     })
     tag.addrA := addrA
     tag.addrB := addrB
+    tag.bankA := bank(addrA)
+    tag.stage := stage
     tag.last := butterflyIndex === lastButterfly
 
-    // E0: Capture the selected operands, twiddle, and destination addresses.
+    when(issue) {
+        assert(bank(addrA) =/= bank(addrB), "butterfly bank conflict")
+        readEnable.foreach(_ := true.B)
+        readRow(bank(addrA)) := row(addrA)
+        readRow(bank(addrB)) := row(addrB)
+    }
+
+    // E0: Issue synchronous reads; capture routing, twiddles, and destinations.
     val valid0 = RegNext(issue, false.B)
     val tag0 = RegEnable(tag, issue)
-    val a0 = RegEnable(buffer(addrA), issue)
-    val b0 = RegEnable(buffer(addrB), issue)
+    // The memory output is the E0 operand register; do not register it again.
+    val a0 = readData(tag0.bankA)
+    val b0 = readData(!tag0.bankA)
     val cos0 = RegEnable(cosFactor, issue)
     val sin0 = RegEnable(sinFactor, issue)
 
@@ -172,7 +221,7 @@ class Radix2Seq(val baseWidth: Int, val samples: Int, val inverse: Boolean) exte
         wrapped := value(workingWidth - 1, 0).asSInt
 
         for (s <- 0 until (stages - 1)) {
-            when(stage === s.U) {
+            when(tag4.stage === s.U) {
                 wrapped := value(baseWidth + s, 0).asSInt
             }
         }
@@ -200,13 +249,27 @@ class Radix2Seq(val baseWidth: Int, val samples: Int, val inverse: Boolean) exte
     }
 
     // E5: Write both results. The final writeback releases the next stage.
+    val resultA = Wire(new ComplexSample(workingWidth))
+    val resultB = Wire(new ComplexSample(workingWidth))
+    resultA.re := finishButterfly(a4.re +& tr4)
+    resultA.im := finishButterfly(a4.im +& ti4)
+    resultB.re := finishButterfly(a4.re -& tr4)
+    resultB.im := finishButterfly(a4.im -& ti4)
+
     when(valid4) {
-        buffer(tag4.addrA).re := finishButterfly(a4.re +& tr4)
-        buffer(tag4.addrA).im := finishButterfly(a4.im +& ti4)
-        buffer(tag4.addrB).re := finishButterfly(a4.re -& tr4)
-        buffer(tag4.addrB).im := finishButterfly(a4.im -& ti4)
+        assert(stage === tag4.stage, "stage advanced before pipeline drained")
+        assert(tag4.bankA === bank(tag4.addrA))
+        assert(tag4.bankA =/= bank(tag4.addrB))
+        writeEnable.foreach(_ := true.B)
+        writeRow(tag4.bankA) := row(tag4.addrA)
+        writeRow(!tag4.bankA) := row(tag4.addrB)
+        writeData(tag4.bankA) := resultA
+        writeData(!tag4.bankA) := resultB
 
         when(tag4.last) {
+            assert(state === DRAIN && !issue)
+            assert(!valid0 && !valid1 && !valid2 && !valid3,
+                "stage completed with outstanding butterflies")
             butterflyIndex := 0.U
             when(stage === lastStage) {
                 outputIndex := 0.U
@@ -221,6 +284,31 @@ class Radix2Seq(val baseWidth: Int, val samples: Int, val inverse: Boolean) exte
     // -------------------------
     // Output streaming
     // -------------------------
+
+    // Prefetch bin zero on the final writeback edge, preserving the original
+    // first-valid cycle. Later reads repeat the current bin during stalls, or
+    // fetch its successor on a handshake. Thus the synchronous output remains
+    // stable under backpressure without adding a second sample buffer.
+    val firstOutput = valid4 && tag4.last && tag4.stage === lastStage
+    val outputRead = firstOutput || state === OUTPUT
+    val outputAddress = Mux(firstOutput, 0.U,
+        Mux(io.out.fire, outputIndex + 1.U, outputIndex))
+    val outputBank = RegEnable(bank(outputAddress), outputRead)
+
+    // For N=2, bin zero is written on the prefetch edge. Forward the complete
+    // result and suppress the colliding read instead of relying on BRAM mode.
+    val forwardFirst = if (samples == 2) firstOutput else false.B
+    if (samples == 2) {
+        val forwarded = RegEnable(resultA, forwardFirst)
+        val useForwarded = RegNext(forwardFirst, false.B)
+        io.out.data := Mux(useForwarded, forwarded, readData(outputBank))
+    } else {
+        io.out.data := readData(outputBank)
+    }
+    when(outputRead && !forwardFirst) {
+        readEnable(bank(outputAddress)) := true.B
+        readRow(bank(outputAddress)) := row(outputAddress)
+    }
 
     when(state === OUTPUT && io.out.fire) {
         when(outputIndex === lastIndex) {

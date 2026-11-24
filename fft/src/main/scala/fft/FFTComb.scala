@@ -42,7 +42,3 @@ class FFTComb(val N: Int = 32) extends Module {
     }
   }
 }
-
-object FFTComb extends App {
-  emitVerilog(new FFTComb())
-}

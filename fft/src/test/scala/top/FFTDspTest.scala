@@ -10,6 +10,7 @@ import org.scalatest.matchers.should.Matchers
 
 import cosimulation.{FFTRadix2, ComplexValue}
 import scala.util.Random
+import _root_.util.SignalTestUtils.wrapSigned
 
 class FFTDspTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
   behavior of "FFTDsp"
@@ -41,22 +42,6 @@ class FFTDspTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
     val filtered = applyMask(fft, mask)
     val ifft = FFTRadix2.ifft(filtered)
     ifft
-  }
-
-  // --------------------------------------------------
-  // Wrap overflow values
-  // --------------------------------------------------
-
-  def wrapSigned(value: Int, width: Int): Int = {
-    val modulus = 1L << width
-    val unsigned = ((value.toLong % modulus) + modulus) % modulus
-    val signBit = 1L << (width - 1)
-
-    if (unsigned >= signBit) {
-      (unsigned - modulus).toInt
-    } else {
-      unsigned.toInt
-    }
   }
 
   // --------------------------------------------------
