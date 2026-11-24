@@ -49,7 +49,7 @@ class LinearInterpolation(val dataWidth: Int, val samples: Int, val overlapSampl
 
     // Sum the partial products using an adder tree:
     // weighted = i*(b - a)
-    val weighted = terms.reduceTree(_ +& _)
+    val weighted = terms.reduce(_ +& _)
 
     // Normalize by O = 2^K using an arithmetic right shift
     // and add the previous frame sample:
