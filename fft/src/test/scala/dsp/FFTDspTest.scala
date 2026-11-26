@@ -16,6 +16,7 @@ class FFTDspTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
   behavior of "FFTDsp"
 
   val samples = 32
+  val bands = 16
   val inputWidth = 8
   val maxCycles = 10000
   val random = new Random(42)
@@ -27,7 +28,7 @@ class FFTDspTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
   def applyMask(fft: Seq[ComplexValue], mask: Int): Seq[ComplexValue] = {
     require(fft.length == samples)
     fft.zipWithIndex.map { case (bin, k) =>
-      val enabled = ((mask >> maskIndex(k, samples)) & 1) == 1
+      val enabled = ((mask >> maskIndex(k, samples, bands)) & 1) == 1
       if (enabled) bin else ComplexValue(0, 0)
     }
   }
@@ -49,7 +50,7 @@ class FFTDspTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
 
   it should "correctly perform FFT, filtering and IFFT" in {
 
-    test(new FFTDsp(inputWidth, samples))
+    test(new FFTDsp(inputWidth, samples, bands))
       .withAnnotations(Seq(VerilatorBackendAnnotation)) { dut =>
 
       // Initialize inputs

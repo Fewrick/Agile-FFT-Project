@@ -13,7 +13,7 @@ class AudioConfigurationTest extends AnyFlatSpec {
       (4, 8, 12500, 8, 50000000),
       (3, 8, 12500, 9, 100000000))) {
       intercept[IllegalArgumentException] {
-        (new ChiselStage).emitChirrtl(new AudioTop(n, w, rate, length, clock))
+        (new ChiselStage).emitChirrtl(new AudioTop(n, w, rate, length, clock, bands = 16))
       }
     }
   }

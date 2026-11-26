@@ -9,8 +9,9 @@ import scala.util.Random
 
 class SimpleBandpassTest extends AnyFlatSpec with ChiselScalatestTester {
   val samples = 32
+  val bands = 16
   "BandpassFilter" should "filter frequencies based on the mask" in {
-    test(new BandpassFilter(8, samples)) { dut =>
+    test(new BandpassFilter(8, samples, bands)) { dut =>
 
       def run(mask: Int): Unit = {
         println(s"Testing with mask 0b${mask.toBinaryString.reverse.padTo(16, '0').reverse}")
@@ -23,9 +24,9 @@ class SimpleBandpassTest extends AnyFlatSpec with ChiselScalatestTester {
           dut.io.in.im.poke(im.S)
           dut.clock.step()
 
-          val pass = ((mask >> maskIndex(i, samples)) & 1) == 1
+          val pass = ((mask >> maskIndex(i, samples, bands)) & 1) == 1
           val (expRe, expIm) = if (pass) (re, im) else (0, 0)
-          println(s"idx $i (switch ${maskIndex(i, samples)}): in=($re,$im) " +
+          println(s"idx $i (switch ${maskIndex(i, samples, bands)}): in=($re,$im) " +
             s"out=(${dut.io.out.re.peek().litValue},${dut.io.out.im.peek().litValue})")
           dut.io.out.re.expect(expRe.S)
           dut.io.out.im.expect(expIm.S)

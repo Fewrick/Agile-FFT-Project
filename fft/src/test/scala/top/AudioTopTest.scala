@@ -9,7 +9,7 @@ import cosimulation.FFTRadix2
 import _root_.util.SignalTestUtils.wrapSigned
 
 // Test-only observations: production IO and recording memory remain unchanged.
-class ObservedAudioTop extends AudioTop(4, 8, 12500, 8) {
+class ObservedAudioTop extends AudioTop(4, 8, 12500, 8, bands = 16) {
   val debug = IO(new Bundle {
     val idle = Output(Bool())
     val counts = Output(Vec(4, UInt(16.W)))
