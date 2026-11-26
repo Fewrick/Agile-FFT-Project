@@ -24,7 +24,7 @@ class AudioTop(val samples: Int, val width: Int, val sampleRate: Int, val record
   val io = IO(new Bundle {
     val streamIn  = Input(Bool())
     val start     = Input(Bool()) // Capture a new recording
-    val process   = Input(Bool()) // FFT -> mask -> IFFT, in place
+    val process   = Input(Bool()) // Recompute FFT -> mask -> IFFT from the original recording
     val output    = Input(Bool()) // Play the current recording
     val mask      = Input(UInt(bands.W))
     val streamOut = Output(UInt(width.W)) // LED status: stored, processed, playing
@@ -35,11 +35,13 @@ class AudioTop(val samples: Int, val width: Int, val sampleRate: Int, val record
 
   // Recording memory for captured samples
   val recordingMem = SyncReadMem(recordingSamples, SInt(width.W), SyncReadMem.ReadFirst)
-  annotate(new ChiselAnnotation {
-    override def toFirrtl = firrtl.AttributeAnnotation(recordingMem.toTarget, "ram_style = \"block\"")
-  })
+  annotate(new ChiselAnnotation { override def toFirrtl = firrtl.AttributeAnnotation(recordingMem.toTarget, "ram_style = \"block\"") })
   val recordingAddr = RegInit(0.U(recordingAddrWidth.W))
   val lastRecordingAddr = (recordingSamples - 1).U
+
+  // Processed memory for IFFT output samples
+  val processedMem = SyncReadMem(recordingSamples, SInt(width.W), SyncReadMem.ReadFirst)
+  annotate(new ChiselAnnotation { override def toFirrtl = firrtl.AttributeAnnotation(processedMem.toTarget, "ram_style = \"block\"") })
 
   // Module instantiations
   val mic = Module(new Microphone(width))
@@ -60,6 +62,8 @@ class AudioTop(val samples: Int, val width: Int, val sampleRate: Int, val record
   import State._
 
   val state = RegInit(Idle)
+  val hasRecording = RegInit(false.B)
+  val hasProcessed = RegInit(false.B)
 
   // Starting address of the current FFT frame in recordingMem
   val frameStart = RegInit(0.U(recordingAddrWidth.W))
@@ -83,15 +87,18 @@ class AudioTop(val samples: Int, val width: Int, val sampleRate: Int, val record
   dsp.io.readAddr := store.io.readAddr
   store.io.readData := dsp.io.readData
 
-  // Recording memory -> FrameLoader
-  // Share the recording memory read port between
-  // frame loading and audio playback.
-  val memReadEn = loader.io.readEn || speaker.io.readEn
-  val memReadAddr = Mux(speaker.io.readEn, speaker.io.readAddr, loader.io.readAddr)
-  val memReadData = recordingMem.read(memReadAddr, memReadEn)
+  // One synchronous read port per RAM. Frame loading always uses the original;
+  // playback selects the original or the completed processed recording.
+  val recordingReadEn = WireDefault(loader.io.readEn || (speaker.io.readEn && !hasProcessed))
+  val recordingReadAddr = WireDefault(Mux(loader.io.readEn, loader.io.readAddr, speaker.io.readAddr))
+  val recordingReadData = recordingMem.read(recordingReadAddr, recordingReadEn)
+  val processedReadEn = WireDefault(speaker.io.readEn && hasProcessed)
+  val processedReadAddr = WireDefault(speaker.io.readAddr)
+  val processedReadData = processedMem.read(processedReadAddr, processedReadEn)
 
-  loader.io.readData  := memReadData
-  speaker.io.readData := memReadData
+  loader.io.readData := recordingReadData
+  // hasProcessed stays constant throughout playback, including RAM responses.
+  speaker.io.readData := Mux(hasProcessed, processedReadData, recordingReadData)
 
   // Frame loading and playback must never occur simultaneously.
   assert(!(loader.io.readEn && speaker.io.readEn))
@@ -104,8 +111,6 @@ class AudioTop(val samples: Int, val width: Int, val sampleRate: Int, val record
   val startRise = buttonRise(io.start)
   val processRise = buttonRise(io.process)
   val outputRise = buttonRise(io.output)
-  val hasRecording = RegInit(false.B)
-  val hasProcessed = RegInit(false.B)
   // Simultaneous presses have deterministic priority: capture, process, output.
   // Busy presses are ignored rather than queued for a later operation.
   val acceptStart = state === Idle && startRise
@@ -113,39 +118,13 @@ class AudioTop(val samples: Int, val width: Int, val sampleRate: Int, val record
   val acceptOutput = state === Idle && hasRecording && !startRise && !processRise && outputRise
   val writeSample = state === Capture && mic.io.writeEn
 
-  // Share the recording memory write port between
-  // microphone acquisition and processed frame storage.
-  val memWriteEn = writeSample || store.io.writeEn
-
-  val memWriteAddr = Mux(
-    store.io.writeEn,
-    store.io.writeAddr,
-    recordingAddr
-  )
-
-  val memWriteData = Mux(
-    store.io.writeEn,
-    store.io.writeData,
-    mic.io.writeData
-  )
-
-  when(memWriteEn) {
-    recordingMem.write(memWriteAddr, memWriteData)
+  // Only acquisition can modify the original; every processing pass writes
+  // FrameStore's global destination addresses into the separate processed RAM.
+  when(writeSample) {
+    recordingMem.write(recordingAddr, mic.io.writeData)
   }
-
-  // Acquisition and frame storage must never occur simultaneously.
-  assert(!(writeSample && store.io.writeEn))
-
-  assert(!(memReadEn && memWriteEn), "Recording RAM access phases must be exclusive")
-  when(memReadEn) { assert(memReadAddr < recordingSamples.U) }
-  when(memWriteEn) { assert(memWriteAddr < recordingSamples.U) }
-  when(loader.io.writeEn) { assert(!dsp.io.busy && !dsp.io.start) }
-  when(dsp.io.start) { assert(!dsp.io.busy && !loader.io.busy) }
-  when(store.io.readEn) { assert(dsp.io.done) }
-  when(loader.io.done) { assert(!loader.io.writeEn && !loader.io.busy) }
-  when(store.io.done) { assert(!store.io.writeEn && !store.io.busy) }
-  when(state =/= Idle && state =/= Capture) {
-    assert(frameStart <= lastFrameStart)
+  when(store.io.writeEn) {
+    processedMem.write(store.io.writeAddr, store.io.writeData)
   }
 
   // DSP input interface.
@@ -234,6 +213,48 @@ class AudioTop(val samples: Int, val width: Int, val sampleRate: Int, val record
       }
     }
   }
+
+  // Assertions for simulation and formal verification
+  assert(!(writeSample && store.io.writeEn), "Acquisition and frame storage must be exclusive")
+  assert(!(recordingReadEn && writeSample), "Original RAM access phases must be exclusive")
+  assert(!(processedReadEn && store.io.writeEn), "Processed RAM access phases must be exclusive")
+  when(writeSample) {
+    assert(state === Capture)
+    assert(recordingAddr < recordingSamples.U)
+  }
+  when(store.io.writeEn) {
+    assert(state === StoreFrame)
+    assert(store.io.writeAddr < recordingSamples.U)
+  }
+  when(recordingReadEn) { 
+    assert(recordingReadAddr < recordingSamples.U) 
+  }
+  when(processedReadEn) { 
+    assert(processedReadAddr < recordingSamples.U) 
+  }
+  when(state === LoadFrame || state === Launch || state === WaitForDsp ||
+    state === StoreFrame || state === ProcessingDone) {
+    assert(!writeSample, "Processing must preserve the original recording")
+  }
+  when(loader.io.writeEn) { 
+    assert(!dsp.io.busy && !dsp.io.start) 
+  }
+  when(dsp.io.start) { 
+    assert(!dsp.io.busy && !loader.io.busy) 
+  }
+  when(store.io.readEn) { 
+    assert(dsp.io.done) 
+  }
+  when(loader.io.done) { 
+    assert(!loader.io.writeEn && !loader.io.busy) 
+  }
+  when(store.io.done) { 
+    assert(!store.io.writeEn && !store.io.busy) 
+  }
+  when(state =/= Idle && state =/= Capture) {
+    assert(frameStart <= lastFrameStart)
+  }
+
 }
 
 object AudioTop extends App {
