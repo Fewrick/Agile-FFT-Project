@@ -163,10 +163,12 @@ This reduction from 160 PDM bits to one PCM sample is called *decimation*. With 
 
 ### Butterfly operations
 The butterfly operation is the basic calculation used in the Radix-2 FFT and IFFT. A single operation combines two complex values and produces two new values. For two complex inputs **A** and **B**, a butterfly first multiplies **B** by a complex coefficient called the *twiddle factor* **W**. It then adds and subtracts the result.
+**Math is here**
 $$T = W*B, Y_0 = A + T, Y_1 = A-T$$
 The twiddle factor controls how the frequency-domain parts are combined. For the inverse FFT, it has the form: 
+**Math is here**
 $$W=cos(theta)+i*sin(theta)$$
-
+The angle depends on the butterfly's position and the current stage. The Forward FFT uses the opposite sign for the imaginary part. 
 ## Frequency-Domain Filter
 
 ## Inverse FFT
@@ -174,7 +176,9 @@ The **Inverse Fast Fourier Transform (IFFT)** combines these frequency component
 
 The audio pipeline uses the `IFFTSeq` module, which receives one complex frequency valie at a time. Each value has a real and an imaginary component (Maybe leave out this, because it would be described earlier), both of which are used in the calculation. The module collects a complete block of values before processing it. This block size is configurable and must be a power of 2. 
 
-`IFFTSeq` uses the same sequential radix-2 core (explain in FFT or its own section) as the forward FFT, configured to perform the inverse transform. The core stores incoming values in bit-reversed order and processes them through a series of butterfly operations. Calculations are spread over multiple clock cycles, with intermediate results stored in memory. The inverse transform uses coefficients with the opposite sine sign to the forward transform and divides results by two at each stage to normalize the output.
+`IFFTSeq` uses the same sequential radix-2 core (explain in FFT or its own section) as the forward FFT, configured to perform the inverse transform. The core stores incoming values in bit-reversed order and processes them through a series of butterfly operations. Calculations are spread over multiple clock cycles, with intermediate results stored in memory. The inverse transform uses coefficients with the opposite sine sign to the forward transform and divides results by two at each stage to normalize the output. For a transform of *N* samples, there are Log2(N) stages, so the combined effect is a division by *N*. 
+
+The hardware performs these calculations using signed integers rather than floating-points. The sine and cosine coefficients are scaled by 127 and rounded to  integers, and after the multiplication steps, the result is divided by 127 to scale down again. Intermediate values are stored in memory between stages, and divisions truncate toward zero. Therefore the hardware implementation produces a result which is an approximation of the mathematical inverse FFT. 
 
 Once processing is complete, the reconstructed samples are sent out in their original time order using a ready/valid interface. In the audio pipeline, only the real part of each output is stored for the playback. Because the arithmetic uses finite-width integers, rounding and truncation will introduce small differences in the audio returned by the IFFT compared to the original audio sample.
 
@@ -184,3 +188,26 @@ Once processing is complete, the reconstructed samples are sent out in their ori
 
 # Testing
 
+The project uses **ScalaTest** and **ChiselTest** to simulate hardware modules and check their outputs against expected values. The tests cover individual components, the FFT processing chain, and the top-level audio controller. Some tests uses Verilator to simulate the Verilog microphone and integrated hardware. 
+
+## FFT and Inverse FFT
+### Sequential transforms
+`Radix2SeqTest` checks both the sequential FFT and the inverse FFT with *2, 4, 32, 64,* and *128* samples. Each output's real and imaginary components are compared exactly with a fixed-point Scala software reference model that reproduces the hardware's arithmetic and width handling. 
+
+The inputs include zeroes, constant values, positive and negative impulses, alternating values, sine and cosine waves, combined frequencies, and reproducible random data. Multiple frames are processed in sequence to check that the transform returns its input-loading state correctly. 
+
+The tests also introduces pauses on the streaming interface. They check that the output remains valid and unchanged while the receiver is not ready, and that input is not accepted while the transform is computing or outputting a frame. For frames without pauses , the expected cycle count is checked. 
+
+`IFFTSeqTest` also compares the inverse transform against the software reference for complex inputs. A separate round-trip test sends a 32-sample frame through the FFT and IFFT and checks that the reconstructed real samples are within 2 units **(Should be compared to exact?)** of the input and the imaginary components are within 2 units of zero **(Same question)**.
+
+### Combinational transforms
+`FFTHardwareTest` checks the combinational FFT using several signals with recognizable frequency-domain results:
+- A constant input produces a nonzero DC bin and zero i nthe other bins.
+- An impulse produces an approximately flat spectrum.
+- A single-frequency sine wave produces its largest peaks at the expected frequency bin and its mirror. 
+- Random inputs are compared with the integer software reference, allowing a difference of up to 2 units per real or imaginary component **(Should be compared to exact?)**
+
+The combinational inverse FFT is also checked with a DC input and random complex frequency values. 
+
+### Transform memory and arithmetic
+The sequential transform uses two memory banks to supply the two values needed for a a butterfly operation. 
