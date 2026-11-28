@@ -4,12 +4,13 @@
 
 PYTHON ?= python
 SBT ?= sbt
-SBT_ARGS ?= -Dsamples=$(SAMPLES) -Dwidth=$(WIDTH) -DsampleRate=$(SAMPLE_RATE) -DclkFreq=$(CLK_FREQ) $(if $(RECORDING_SAMPLES),-DrecordingSamples=$(RECORDING_SAMPLES))
+SBT_ARGS ?= -Dsamples=$(SAMPLES) -DoverlapSamples=$(OVERLAP_SAMPLES) -Dwidth=$(WIDTH) -DsampleRate=$(SAMPLE_RATE) -DclkFreq=$(CLK_FREQ) $(if $(RECORDING_SAMPLES),-DrecordingSamples=$(RECORDING_SAMPLES))
 
 WAVEFORM ?= sine
 PHASE ?= 0
 SEED ?= 0
 SAMPLES ?= 32
+OVERLAP_SAMPLES ?= $(shell echo $$(($(SAMPLES)/2)))
 WIDTH ?= 8
 SAMPLE_RATE ?= 12500
 CLK_FREQ ?= 100000000

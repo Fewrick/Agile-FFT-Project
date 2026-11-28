@@ -8,19 +8,19 @@ import audioIO.{Microphone, Speaker}
 import buffer.{FrameLoader, FrameStore}
 import dsp.FFTDsp
 
-class AudioTop(val samples: Int, val width: Int, val sampleRate: Int, val recordingSamples: Int, val clkFreq: Int = 100000000, val bands: Int) extends Module {
+class AudioTop(val samples: Int, val overlapSamples: Int, val width: Int, val sampleRate: Int, val recordingSamples: Int, val clkFreq: Int = 100000000, val bands: Int) extends Module {
   require(samples >= 2 && isPow2(samples))
   require(width == 8, "Microphone PCM currently supports eight-bit samples only")
-  require(clkFreq == 100000000 && sampleRate == 12500,
-    "Fixed microphone divider supports only 100 MHz / 12,500 Hz")
+  require(clkFreq == 100000000 && sampleRate == 12500, "Fixed microphone divider supports only 100 MHz / 12,500 Hz")
   require(sampleRate > 0 && sampleRate <= clkFreq)
   require(recordingSamples >= samples)
   require(recordingSamples % samples == 0, "recordingSamples must be divisible by samples")
 
   val frames = recordingSamples / samples
-
   val recordingAddrWidth = math.max(1, log2Ceil(recordingSamples))
 
+  // Debug print for the parameters
+  println(s"AudioTop: samples = $samples, overlapSamples = $overlapSamples, width = $width, sampleRate = $sampleRate, recordingSamples = $recordingSamples, clkFreq = $clkFreq, bands = $bands")
   val io = IO(new Bundle {
     val streamIn  = Input(Bool())
     val start     = Input(Bool()) // Capture a new recording
@@ -259,10 +259,11 @@ class AudioTop(val samples: Int, val width: Int, val sampleRate: Int, val record
 
 object AudioTop extends App {
   val samples = sys.props.get("samples").map(_.toInt).getOrElse(32)
+  val overlapSamples = sys.props.get("overlapSamples").map(_.toInt).getOrElse(samples/2)
   val width = sys.props.get("width").map(_.toInt).getOrElse(8)
   val sampleRate = sys.props.get("sampleRate").map(_.toInt).getOrElse(12500)
   val recordingSamples = sys.props.get("recordingSamples").map(_.toInt).getOrElse(((sampleRate + samples - 1) / samples) * samples)
   val clkFreq = sys.props.get("clkFreq").map(_.toInt).getOrElse(100000000)
   val bands = sys.props.get("bands").map(_.toInt).getOrElse(16)
-  emitVerilog(new AudioTop(samples, width, sampleRate, recordingSamples, clkFreq, bands), Array("--target-dir", "generated"))
+  emitVerilog(new AudioTop(samples, overlapSamples, width, sampleRate, recordingSamples, clkFreq, bands), Array("--target-dir", "generated"))
 }
