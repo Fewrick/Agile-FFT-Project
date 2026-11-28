@@ -161,6 +161,12 @@ This reduction from 160 PDM bits to one PCM sample is called *decimation*. With 
 ## FFT 
 *Explain how the radix-2 works as well. Maybe this should go in its own section*
 
+### Butterfly operations
+The butterfly operation is the basic calculation used in the Radix-2 FFT and IFFT. A single operation combines two complex values and produces two new values. For two complex inputs **A** and **B**, a butterfly first multiplies **B** by a complex coefficient called the *twiddle factor* **W**. It then adds and subtracts the result.
+$$T = W*B, Y_0 = A + T, Y_1 = A-T$$
+The twiddle factor controls how the frequency-domain parts are combined. For the inverse FFT, it has the form: 
+$$W=cos(theta)+i*sin(theta)$$
+
 ## Frequency-Domain Filter
 
 ## Inverse FFT
@@ -168,7 +174,9 @@ The **Inverse Fast Fourier Transform (IFFT)** combines these frequency component
 
 The audio pipeline uses the `IFFTSeq` module, which receives one complex frequency valie at a time. Each value has a real and an imaginary component (Maybe leave out this, because it would be described earlier), both of which are used in the calculation. The module collects a complete block of values before processing it. This block size is configurable and must be a power of 2. 
 
-`IFFTSeq` uses the same sequential radix-2 core (explain in FFT or its own section) as the forward FFT, configured to perform the inverse transform. The core stores incoming values in bit-reversed order and 
+`IFFTSeq` uses the same sequential radix-2 core (explain in FFT or its own section) as the forward FFT, configured to perform the inverse transform. The core stores incoming values in bit-reversed order and processes them through a series of butterfly operations. Calculations are spread over multiple clock cycles, with intermediate results stored in memory. The inverse transform uses coefficients with the opposite sine sign to the forward transform and divides results by two at each stage to normalize the output.
+
+Once processing is complete, the reconstructed samples are sent out in their original time order using a ready/valid interface. In the audio pipeline, only the real part of each output is stored for the playback. Because the arithmetic uses finite-width integers, rounding and truncation will introduce small differences in the audio returned by the IFFT compared to the original audio sample.
 
 ## Output Buffer and Speak Interface
 
