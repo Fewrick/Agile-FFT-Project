@@ -10,7 +10,7 @@ import _root_.util.FrequencyMaskReference.maskIndex
 import _root_.util.SignalTestUtils.wrapSigned
 
 // Test-only observations and idle inspection reuse the production RAM read ports.
-class ObservedAudioTop extends AudioTop(8, 8, 12500, 24, bands = 16) {
+class ObservedAudioTop extends AudioTop(32, 16, 8, 12500, 128, bands = 16) {
   val debug = IO(new Bundle {
     val inspect = Input(Bool())
     val inspectAddr = Input(UInt(recordingAddrWidth.W))
@@ -83,7 +83,7 @@ class AudioTopTest extends AnyFlatSpec with ChiselScalatestTester {
   it should "retain two independent ReadFirst recording RAMs with one read and write port each" in {
     for ((n, length) <- Seq((2, 2), (8, 24), (32, 12512))) {
       val rtl = (new chisel3.stage.ChiselStage).emitChirrtl(
-        new AudioTop(n, 8, 12500, length, bands = 16),
+        new AudioTop(n, n/2, 8, 12500, length, bands = 16),
         Array("--target-dir", s"test_run_dir/audio_memory_$length"))
       val top = rtl.substring(rtl.indexOf("  module AudioTop :"))
       val memories = "(?m)^\\s*smem .*".r.findAllIn(top).toSeq
